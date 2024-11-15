@@ -1,0 +1,12 @@
+id	name	title
+1	stock	Фондовый рынок и рынок депозитов
+2	state	Рынок ГЦБ (размещение)
+3	currency	Валютный рынок
+4	futures	Срочный рынок
+5	commodity	Товарный рынок
+6	interventions	Товарные интервенции
+7	offboard	ОТС-система
+9	agro	Агро
+1012	otc	ОТС с ЦК
+1282	quotes	Квоты
+1326	money	Денежный рынок
