@@ -3,6 +3,8 @@ import polars as pl
 import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
+from arch.unitroot import PhillipsPerron
+from statsmodels.tsa.stattools import adfuller
 
 # Здесь все признаки и все по датафрейму
 
@@ -167,8 +169,42 @@ class FinData():
         return self.df.columns
 
 
+    def check_stationarity(self, columns):
+        """
+        Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
+        теста Дики-Фуллера (ADF).
 
-        
+        Параметры:
+            columns (list): Список названий столбцов для проверки на стационарность.
+
+        Выводит результаты тестов для каждого столбца. Если хотя бы один тест обнаруживает
+        нестационарность, выводит сообщение с указанием тестов и их p-value.
+        """
+        for column in columns:
+            if column in self.df.columns:
+                series = self.df[column].dropna()
+
+                # Результаты тестов
+                pp_result = PhillipsPerron(series)
+                adf_result = adfuller(series, autolag='AIC')
+
+                # Проверка p-value для каждого теста
+                non_stationary_tests = []
+
+                if pp_result.pvalue > 0.05:
+                    non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
+
+                if adf_result[1] > 0.05:
+                    non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
+
+                # Вывод результатов
+                if non_stationary_tests:
+                    print(f"Столбец: {column}")
+                    print("  Нестационарность обнаружена в следующих тестах:")
+                    for test in non_stationary_tests:
+                        print(f"    - {test}")
+            else:
+                print(f"Столбец '{column}' не найден в DataFrame.")
     
 
 
