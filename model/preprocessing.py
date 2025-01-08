@@ -43,10 +43,24 @@ def train_data_hp_filter(data, l=10, num_pr=None):
 
 # Скейлинг, по идее нельзя особо юзать даже 
 class Scaler(Enum):
+    """
+    Перечисление для выбора метода скейлинга данных.
+    """
     Standart = StandardScaler()
     Power = PowerTransformer()
 
 def scale_num_data(data, numeric, scaler : Scaler):
+    """
+    Масштабирует числовые признаки данных с использованием заданного скейлера.
+
+    Параметры:
+        data (pd.DataFrame): Исходные данные.
+        numeric (list): Список числовых признаков для масштабирования.
+        scaler (Scaler): Выбранный метод скейлинга из перечисления Scaler.
+
+    Возвращает:
+        pd.DataFrame: Данные с масштабированными числовыми признаками.
+    """
     scale_model = scaler.value
     transformed_data = data.copy()
     transformed_data[numeric] = scale_model.fit(transformed_data[numeric]).transform(transformed_data[numeric])
@@ -59,15 +73,65 @@ def train_valid_split(data,
                       numeric, cat, target, 
                       utc = []): # utc здесь добавлено для optuna 
         # возвращает тестовую и валидационную выборки в завимости от заданного времени
-        
-        train_df = data[data["utc"] < dt.datetime(year, month, day)]
+    """
+    Делит данные на обучающую и валидационную выборки в зависимости от указанной даты.
 
-        X_train = train_df[numeric + cat + utc]
-        y_train = train_df[target]
+    Параметры:
+        data (pd.DataFrame): Исходные данные.
+        year (int): Год разделения.
+        month (int): Месяц разделения.
+        day (int): День разделения.
+        numeric (list): Список числовых признаков.
+        cat (list): Список категориальных признаков.
+        target (str): Целевой столбец.
+        utc (list, optional): Дополнительные временные признаки.
 
-        test_df = data[data["utc"] >=  dt.datetime(year, month, day)]
+    Возвращает:
+        tuple: Обучающие и валидационные признаки и целевые значения.
+    """    
+    train_df = data[data["utc"] < dt.datetime(year, month, day)]
 
-        X_val = test_df[numeric + cat + utc]
-        y_val = test_df[target]
+    X_train = train_df[numeric + cat + utc]
+    y_train = train_df[target]
 
-        return X_train, X_val, y_train, y_val
+    test_df = data[data["utc"] >=  dt.datetime(year, month, day)]
+
+    X_val = test_df[numeric + cat + utc]
+    y_val = test_df[target]
+
+    return X_train, X_val, y_train, y_val
+
+def train_valid_test_split(data, 
+                      test_start_data : dt.datetime, # с точностью до минут указываем начало тестового периода 
+                      numeric, cat, target, 
+                      utc = [], test_ticks = 10, val_ticks = 200): # utc здесь добавлено для optuna 
+    
+    """
+    Делит данные на обучающую, валидационную и тестовую выборки.
+
+    Параметры:
+        data (pd.DataFrame): Исходные данные.
+        test_start_data (datetime): Начало тестового периода.
+        numeric (list): Список числовых признаков.
+        cat (list): Список категориальных признаков.
+        target (str): Целевой столбец.
+        utc (list, optional): Дополнительные временные признаки.
+        test_ticks (int, optional): Количество записей для тестовой выборки.
+        val_ticks (int, optional): Количество записей для валидационной выборки.
+
+    Возвращает:
+        tuple: Обучающие, валидационные и тестовые признаки и целевые значения.
+    """
+    train_valid_df = data[data["utc"] < test_start_data]
+    train_df = train_valid_df[:train_valid_df.shape[0] - val_ticks]
+    valid_df = train_valid_df[train_valid_df.shape[0] - val_ticks : ]
+    X_train = train_df[numeric + cat + utc]
+    y_train = train_df[target]
+    X_val = valid_df[numeric + cat + utc]
+    y_val = valid_df[target]
+
+    test_df = data[data["utc"] >=  test_start_data][:test_ticks]
+    X_test = test_df[numeric + cat + utc]
+    y_test = test_df[target]
+
+    return X_train, X_val, X_test, y_train, y_val, y_test
