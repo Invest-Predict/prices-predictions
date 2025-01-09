@@ -3,6 +3,8 @@ import polars as pl
 import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
+from arch.unitroot import PhillipsPerron
+from statsmodels.tsa.stattools import adfuller
 
 # Здесь все признаки и все по датафрейму
 
@@ -11,7 +13,18 @@ import numpy as np
 
 
 class FinData():
+    """
+    Класс для обработки финансовых данных. 
+    Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
+    визуализировать и подготавливать таргет для моделей машинного обучения.
+    """
     def __init__(self, df_path = 'datasets/T_yandex_10min.csv'):
+        """
+        Инициализирует объект FinData, загружая данные из CSV-файла.
+
+        Параметры:
+            df_path (str): Путь к CSV-файлу с данными.
+        """
         self.df = pd.read_csv(df_path)
 
         self.df = self.df.rename(columns={'Yandex open' : 'open', 
@@ -27,6 +40,12 @@ class FinData():
 
         
     def make_binary_class_target(self):
+        """
+        Добавляет два типа таргетов: бинарный и трехклассовый.
+
+        direction_binary: 0 или 1 в зависимости от изменения цены закрытия.
+        direction: 0, 1 или 2 для обозначения направления изменения цены (вниз, без изменений, вверх).
+        """
         # добавляет два варианта таргета - 2 и 3 класса 
 
         # self.df = pl.from_pandas(self.df)
@@ -49,16 +68,28 @@ class FinData():
             self.df = self.df[self.df >= date]
             return 
 
+    def restrict_time_down(self, year, month, day):
+        """
+        Обрезает данные, оставляя только записи начиная с указанной даты.
+
+        Параметры:
+            year (int): Год.
+            month (int): Месяц.
+            day (int): День.
+        """
         self.df = pl.from_pandas(self.df)
         self.df = self.df.filter(pl.col("utc") >= pl.datetime(year, month, day))
         self.df = self.df.to_pandas()
 
-    def restrict_time_up(self, year=2024, month=9, day=11, date = None):
-        # обрезает датасет по времени ДО
-        if date is not None:
-            self.df = self.df[self.df <= date]
-            return
+    def restrict_time_up(self, year, month, day):
+        """
+        Обрезает данные, оставляя только записи до указанной даты.
 
+        Параметры:
+            year (int): Год.
+            month (int): Месяц.
+            day (int): День.
+        """
         self.df = pl.from_pandas(self.df)
         self.df = self.df.filter(pl.col("utc") <= pl.datetime(year, month, day))
         self.df = self.df.to_pandas()
@@ -70,15 +101,32 @@ class FinData():
         self.restrict_time_up(date=last_day)
 
     def set_tardet(self, target):
-        # если понадобиться 
+        """
+        Устанавливает таргет для анализа.
+
+        Параметры:
+            target (str): Название столбца с таргетом.
+        """
+        # если понадобиться, а так я обычно не пользуюсь
         self.target = target
     
     def visualize_time_frame(self,
                              year_start, month_start, day_start, 
                              year_end, month_end, day_end, 
                              column, type="line"):
-        
-        
+        """
+        Визуализирует данные за указанный временной интервал.
+
+        Параметры:
+            year_start (int): Год начала.
+            month_start (int): Месяц начала.
+            day_start (int): День начала.
+            year_end (int): Год конца.
+            month_end (int): Месяц конца.
+            day_end (int): День конца.
+            column (str): Название столбца для визуализации.
+            type (str): Тип графика (по умолчанию "line").
+        """
         vis_data = pl.from_pandas(self.df)
         vis_data = vis_data.filter((pl.col("utc") <= pl.datetime(year_end, month_end, day_end)) 
                                    & (pl.col("utc") >= pl.datetime(year_start, month_start, day_start)))
@@ -88,6 +136,12 @@ class FinData():
     
     # Добавление признаков 
     def insert_shifts_norms(self, windows_shifts_norms):
+        """
+        Добавляет нормализованные значения цены с учетом сдвигов.
+
+        Параметры:
+            windows_shifts_norms (list): Список сдвигов для нормализации.
+        """
         for i in windows_shifts_norms:
             self.df[f'close_norms_{i}'] = self.df['close']/self.df['close'].shift(i)
             self.df[f'close_high_norms_{i}'] = self.df['close']/self.df['close'].shift(i)
@@ -102,12 +156,24 @@ class FinData():
         self.df['minute'] = (self.df['utc'].dt.minute + 60 * self.df['hours'])
 
     def insert_rolling_means(self, windows_ma = [3, 6, 18]):
+        """
+        Добавляет скользящие средние для указанных окон.
+
+        Параметры:
+            windows_ma (list): Список размеров окон для скользящих средних.
+        """
         # скользящие средние 
         for i in windows_ma:
             self.df[f'ma_{i}'] = self.df['close'].rolling(window = i, closed="left").mean()
             self.df[f'close_normed_ma_{i}'] = self.df['close']/self.df[f'ma_{i}']
             
     def insert_exp_rolling_means(self, windows_ema = [3, 6, 18]):
+        """
+        Добавляет экспоненциальные скользящие средние для указанных окон.
+
+        Параметры:
+            windows_ema (list): Список размеров окон для EMA.
+        """
         # экспоненциальные скользящие средние
         for i in windows_ema:
             self.df[f'ema_{i}'] = (self.df['close']).ewm(span=i).mean()
@@ -122,8 +188,42 @@ class FinData():
         return self.df.columns
 
 
+    def check_stationarity(self, columns):
+        """
+        Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
+        теста Дики-Фуллера (ADF).
 
-        
+        Параметры:
+            columns (list): Список названий столбцов для проверки на стационарность.
+
+        Выводит результаты тестов для каждого столбца. Если хотя бы один тест обнаруживает
+        нестационарность, выводит сообщение с указанием тестов и их p-value.
+        """
+        for column in columns:
+            if column in self.df.columns:
+                series = self.df[column].dropna()
+
+                # Результаты тестов
+                pp_result = PhillipsPerron(series)
+                adf_result = adfuller(series, autolag='AIC')
+
+                # Проверка p-value для каждого теста
+                non_stationary_tests = []
+
+                if pp_result.pvalue > 0.05:
+                    non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
+
+                if adf_result[1] > 0.05:
+                    non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
+
+                # Вывод результатов
+                if non_stationary_tests:
+                    print(f"Столбец: {column}")
+                    print("  Нестационарность обнаружена в следующих тестах:")
+                    for test in non_stationary_tests:
+                        print(f"    - {test}")
+            else:
+                print(f"Столбец '{column}' не найден в DataFrame.")
     
 
 
