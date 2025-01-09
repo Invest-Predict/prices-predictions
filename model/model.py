@@ -100,7 +100,7 @@ class CatboostFinModel():
         self.args = args
         # запоминает наилучший результат на валидационной выборке 
         self.best_accuracy = 0
-        self.features_best_acuuracy = []
+        self.features_best_accuracy = []
         self.X_train : pd.DataFrame
         self.X_val : pd.DataFrame
         self.y_train : pd.DataFrame
@@ -141,6 +141,7 @@ class CatboostFinModel():
         self.model.fit(self.X_train, self.y_train, eval_set=Pool(self.X_val, self.y_val, cat_features = self.cat), cat_features = self.cat)
         # self.print_feature_importances()
         # self.visualise_shap_values()
+        return self
 
     def predict(self, X_test):
         """
@@ -190,7 +191,7 @@ class CatboostFinModel():
         zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
         ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
 
-        print(f"Точность константного предсказания {zeroes/(ones + zeroes)}")
+        print(f"Точность константного предсказания {max(zeroes, ones)/(ones + zeroes)}")
 
     def print_feature_importances(self):
         """
@@ -311,18 +312,3 @@ class CatboostFinModel():
             print(f"On trial {n_samples} with date {first_date} got accuracy {acc}")
         
         return trials_sum / trials_cnt
-
-
-
-
-
-
-
-
-
-    
-        
-
-
-        
-    

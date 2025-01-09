@@ -18,7 +18,7 @@ class FinData():
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
     визуализировать и подготавливать таргет для моделей машинного обучения.
     """
-    def __init__(self, df_path = 'datasets/T_yandex_10min.csv'):
+    def __init__(self, df_path, column_names=None):
         """
         Инициализирует объект FinData, загружая данные из CSV-файла.
 
@@ -27,12 +27,8 @@ class FinData():
         """
         self.df = pd.read_csv(df_path)
 
-        self.df = self.df.rename(columns={'Yandex open' : 'open', 
-                                          'Yandex close' : 'close', 
-                                          'Yandex high' : 'high', 
-                                          'Yandex low' : 'low', 
-                                          'Yandex volume' : 'volume'}, 
-                                 errors='ignore')
+        if column_names is not None:
+            self.df = self.df.rename(columns=column_names, errors='ignore')
         
         self.df.utc = pd.to_datetime(self.df.utc).dt.tz_localize(None)
         self.df.drop_duplicates(inplace=True)
@@ -100,7 +96,7 @@ class FinData():
         last_day = self.df['utc'][0] + pd.DateOffset(months=months, days=days)
         self.restrict_time_up(date=last_day)
 
-    def set_tardet(self, target):
+    def set_target(self, target):
         """
         Устанавливает таргет для анализа.
 
