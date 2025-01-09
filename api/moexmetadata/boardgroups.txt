@@ -1,0 +1,269 @@
+id	trade_engine_id	trade_engine_name	trade_engine_title	market_id	market_name	name	title	is_default	board_group_id	is_traded	is_order_driven	category
+9	1	stock	Фондовый рынок и рынок депозитов	5	index	stock_index	Индексы	1	9	1		main
+104	1	stock	Фондовый рынок и рынок депозитов	5	index	stock_index_inav	INAV	0	104	1		main
+155	1	stock	Фондовый рынок и рынок депозитов	5	index	stock_index_mmix	Money Market IndeX	0	155	1		main
+1028	1	stock	Фондовый рынок и рынок депозитов	5	index	stock_index_namex	Индексы НТБ	0	1028	1		main
+1153	1	stock	Фондовый рынок и рынок депозитов	5	index	stock_index_pf	Ценовой фиксинг	0	1153	1		main
+287	1	stock	Фондовый рынок и рынок депозитов	5	index	stock_index_sdfi	Индексы СПФИ	0	287	1		main
+57	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_tplus	Т+: Основной режим - безадрес.	1	57	1	1	main
+156	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_tplus_usd	Т+: Основной режим (USD) - безадрес.	0	156	1	1	main
+159	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_etf_eur	Т0 ETF (расч. в EUR) - безадрес.	0	159	0	1	main
+157	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_tplus_eur	Т+: Основной режим (EUR) - безадрес.	0	157	1	1	main
+1215	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_tplus_cny	Т+: Основной режим (CNY) - безадрес.	0	1215	1	1	main
+1238	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_tplus_hkd	Т+: ПАИ (HKD) - безадрес.	0	1238	1	1	main
+6	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares	Т0: Основной режим - безадрес.	0	6	0	1	main
+21	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_sm	Неполные лоты - безадрес.	0	21	1	1	main
+42	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_darkpool	Крупные пакеты - безадрес.	0	42	1	1	main
+30	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_cc	ЦК - Режим основных торгов - безадрес.	0	30	0	1	main
+125	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_shares_settle	Поставка по СК	0	125	1		main
+99	1	stock	Фондовый рынок и рынок депозитов	1	shares	stock_etf_usd	Т0 ETF (USD) - безадрес.	0	99	0	1	main
+58	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_tplus	Т+: Основной режим - безадрес.	1	58	1	1	main
+193	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_tplus_usd	Т+: Основной режим (USD) - безадрес.	0	193	1	1	main
+207	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_tplus_eur	Т+: Облигации (EUR) - безадрес.	0	207	1	1	main
+245	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_tplus_cny	Т+: Облигации (CNY) - безадрес.	0	245	1	1	main
+68	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_etc_tplus	Т+: Основной режим (ЕТС) - безадрес.	0	68	0	1	main
+7	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds	Т0: Основной режим - безадрес.	0	7	0	1	main
+69	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_etc	Т0: Основной режим (ЕТС) - безадрес.	0	69	0	1	main
+67	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_euro	Т0: Основной режим (Еврооблигации) - безадрес.	0	67	0	1	main
+122	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_buyback	Выкуп - безадрес.	0	122	1	1	main
+123	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_distribution	Размещение - безадрес.	0	123	1	1	main
+257	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_auct_pact	Аукцион: адресные заявки	0	257	1		main
+77	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_darkpools	Крупные пакеты - безадрес.	0	77	1	1	main
+105	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_settle	Поставка по СК	0	105	1		main
+167	1	stock	Фондовый рынок и рынок депозитов	2	bonds	stock_bonds_darkpools_usd	Крупные пакеты – Облигации (USD) - безадрес.	0	167	1	1	main
+59	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_tplus	Т+: РПС с ЦК - адрес.	0	59	1	0	main
+73	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_tplus_usd	Т+: РПС с ЦК (USD) - адрес.	0	73	1	0	main
+163	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_tplus_eur	Т+: РПС с ЦК (EUR) - адрес.	0	163	1	0	main
+8	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm	РПС - адрес.	1	8	1	0	main
+74	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_usd	РПС (USD) - адрес.	0	74	1	0	main
+160	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_eur	РПС (EUR) - адрес.	0	160	1	0	main
+284	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_bonds	РПС: Облигации - адрес.	0	284	1	0	main
+285	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_bonds_usd	РПС: Облигации (USD) - адрес.	0	285	1	0	main
+286	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_bonds_eur	РПС: Облигации (EUR) - адрес.	0	286	1	0	main
+106	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_currency	РПС: В валюте - адрес.	0	106	1	0	main
+107	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_issuance	Размещение - адрес.	0	107	1	0	main
+108	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_buyback	Выкуп - адрес.	0	108	1	0	main
+121	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_buyback_eur	Выкуп (EUR) - адрес.	0	121	0	0	main
+126	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_anonymous	Анонимный РПС - адрес.	0	126	1	0	main
+203	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_anonymous_usd	Анонимный РПС (USD) - адрес.	0	203	1	0	main
+205	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_anonymous_eur	Анонимный РПС (EUR) - адрес.	0	205	1	0	main
+124	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_buyback_usd	Выкуп (USD) - адрес.	0	124	1	0	main
+1289	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_buyback_cny	Выкуп (CNY) - адрес.	0	1289	1	0	main
+282	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_ccp_bonds	РПС с ЦК: Облигации - адрес.	0	282	1	0	main
+283	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_ccp_bonds_usd	РПС с ЦК: Облигации (USD) - адрес.	0	283	1	0	main
+209	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_ccp_bonds_eur	РПС с ЦК: Облигации (EUR) - адрес.	0	209	1	0	main
+247	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_bonds_cny	РПС: Облигации (CNY) - адрес.	0	247	1	0	main
+32	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_cc	ЦК - РПС - адрес.	0	32	0	0	main
+249	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_ccp_bonds_cny	РПС с ЦК: Облигации (CNY) - адрес.	0	249	1	0	main
+1218	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_cny	РПС (CNY) - адрес.	0	1218	1	1	main
+1221	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_tplus_cny	Т+: РПС с ЦК (CNY) - адрес.	0	1221	1	1	main
+1241	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_hkd	РПС: ПАИ (HKD) - адресн.	0	1241	1	0	main
+1244	1	stock	Фондовый рынок и рынок депозитов	4	ndm	stock_ndm_tplus_hkd	РПС с ЦК: Паи (HKD) - адресн.	0	1244	1	0	main
+71	1	stock	Фондовый рынок и рынок депозитов	29	otc	stock_otc	Репортинг внебиржевых сделок (6264-У)	1	71	1	0	otc
+50	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp	РЕПО с ЦК 1 день (RUB) - безадрес.	1	50	1	1	main
+92	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_d_usd	РЕПО с ЦК 1 день (USD) - безадрес.	0	92	1	1	main
+93	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_d_eur	РЕПО с ЦК 1 день (EUR) - безадрес.	0	93	1	1	main
+152	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_d_cny	РЕПО с ЦК 1 день (CNY) - безадрес.	0	152	1	1	main
+76	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_w	РЕПО с ЦК 7 дней (RUB) - безадрес.	0	76	1	1	main
+78	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_w_usd	РЕПО с ЦК 7 дней (USD) - безадрес.	0	78	1	1	main
+79	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_w_eur	РЕПО с ЦК 7 дней (EUR) - безадрес.	0	79	1	1	main
+1116	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_w_cny	РЕПО с ЦК 7 дней (CNY) - безадрес.	0	1116	1	1	main
+142	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_m	РЕПО с ЦК 1 мес.(RUB) - безадрес.	0	142	1	1	main
+143	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_m_usd	РЕПО с ЦК 1 мес. (USD) - безадрес.	0	143	1	1	main
+144	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_m_eur	РЕПО с ЦК 1 мес. (EUR) - безадрес.	0	144	1	1	main
+1118	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_1m_cny	РЕПО с ЦК 1 мес. (CNY) - безадрес.	0	1118	1	1	main
+145	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_3m	РЕПО с ЦК 3 мес. (RUB) - безадрес.	0	145	1	1	main
+146	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_3m_usd	РЕПО с ЦК 3 мес. (USD) - безадрес.	0	146	1	1	main
+147	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_3m_eur	РЕПО с ЦК 3 мес. (EUR) - безадрес.	0	147	1	1	main
+1120	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_3m_cny	РЕПО с ЦК 3 мес. (CNY) - безадрес	0	1120	1	1	main
+148	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_liq	РЕПО с ЦК: Урегулирование - безадрес.	0	148	1	1	main
+65	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_ndm	РЕПО с ЦК (RUB) - адрес.	0	65	1	0	main
+91	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_ndm_usd	РЕПО с ЦК (USD) - адрес.	0	91	1	0	main
+96	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_ndm_eur	РЕПО с ЦК (EUR) - адрес.	0	96	1	0	main
+153	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_ndm_cny	РЕПО с ЦК (CNY) - адрес.	0	153	1	0	main
+169	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fk_d	Аукцион с ЦК 1 день - безадрес.	0	169	1	1	main
+171	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fk_2	Аукцион с ЦК 1 неделя - безадрес.	0	171	1	1	main
+173	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fk_2w	Аукцион с ЦК 2 недели - безадрес.	0	173	1	1	main
+281	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fk_5w	Аукцион с ЦК 5 недель - безадрес.	0	281	1	1	main
+175	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fk_m	Аукцион с ЦК 1 месяц - безадрес.	0	175	1	1	main
+177	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fk_2m	Аукцион с ЦК 2 месяца - безадрес.	0	177	1	1	main
+179	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fk_3m	Аукцион с ЦК 3 месяца - безадрес.	0	179	1	1	main
+181	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fk_6	Аукцион с ЦК 6 месяцев - безадрес.	0	181	1	1	main
+183	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fk_1y	Аукцион с ЦК 1 год - безадрес.	0	183	1	1	main
+288	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fr_repo_1d	Аукцион РЕПО с ЦК 1 день - безадрес.	0	288	1	1	main
+289	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fr_repo_1w	Аукцион РЕПО с ЦК 1 неделя - безадрес.	0	289	1	1	main
+296	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fr_repo_2w	Аукцион РЕПО с ЦК 2 недели - безадрес.	0	296	1	1	main
+297	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fr_repo_5w	Аукцион РЕПО с ЦК 5 недель - безадрес.	0	297	1	1	main
+290	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fr_repo_1m	Аукцион РЕПО с ЦК 1 месяц - безадрес.	0	290	1	1	main
+291	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_fr_repo_3m	Аукцион РЕПО с ЦК 3 месяца - безадрес.	0	291	1	1	main
+1247	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_r_1d	Аукцион обр.РЕПО с ЦК 1 день - безадрес.	0	1247	1	1	main
+1249	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_r_1w	Аукцион обр.РЕПО с ЦК 1 неделя - безадрес.	0	1249	1	1	main
+1251	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_r_2w	Аукцион обр.РЕПО с ЦК 2 недели - безадрес.	0	1251	1	1	main
+1253	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_r_1m	Аукцион обр.РЕПО с ЦК 1 месяц - безадрес.	0	1253	1	1	main
+1255	1	stock	Фондовый рынок и рынок депозитов	27	ccp	stock_ccp_r_5w	Аукцион обр.РЕПО с ЦК 5 недель - безадрес.	0	1255	1	1	main
+97	1	stock	Фондовый рынок и рынок депозитов	35	deposit	stock_deposit_order	Депозиты с ЦК - безадрес.	1	97	1	1	main
+185	1	stock	Фондовый рынок и рынок депозитов	35	deposit	stock_deposit_close_auct	Депозиты с ЦК - Аукцион	0	185	1		main
+98	1	stock	Фондовый рынок и рынок депозитов	35	deposit	stock_deposit_off_order	Депозиты с ЦК - адрес.	0	98	1	0	main
+110	1	stock	Фондовый рынок и рынок депозитов	35	deposit	stock_deposit_order_usd	Депозиты с ЦК (USD) - безадрес.	0	110	1	1	main
+137	1	stock	Фондовый рынок и рынок депозитов	35	deposit	stock_deposit_order_eur	Депозиты с ЦК (EUR) - безадрес.	0	137	1	1	main
+1142	1	stock	Фондовый рынок и рынок депозитов	35	deposit	stock_deposit_order_cny	Депозиты с ЦК (CNY) - безадрес. 	0	1142	1	1	main
+109	1	stock	Фондовый рынок и рынок депозитов	35	deposit	stock_deposit_off_order_usd	Депозиты с ЦК (USD) - адрес.	0	109	1	0	main
+136	1	stock	Фондовый рынок и рынок депозитов	35	deposit	stock_deposit_off_order_eur	Депозиты с ЦК (EUR) - адрес.	0	136	0	0	main
+1144	1	stock	Фондовый рынок и рынок депозитов	35	deposit	stock_deposit_off_order_cny	Депозиты с ЦК (CNY) - адрес.	0	1144	1	0	main
+1	1	stock	Фондовый рынок и рынок депозитов	3	repo	stock_shares_repo	РЕПО с акциями - адрес.	0	1	0	0	main
+2	1	stock	Фондовый рынок и рынок депозитов	3	repo	stock_bond_repo	РЕПО с облигациями - адрес.	0	2	1	0	main
+95	1	stock	Фондовый рынок и рынок депозитов	3	repo	stock_repo_interdealer_rub	Междилерское РЕПО (RUB) - адрес.	0	95	0	0	main
+94	1	stock	Фондовый рынок и рынок депозитов	3	repo	stock_repo_interdealer_usd	Междилерское РЕПО (USD) - адрес.	0	94	1	0	main
+90	1	stock	Фондовый рынок и рынок депозитов	3	repo	stock_repo_interdealer_eur	Междилерское РЕПО (EUR) - адрес.	0	90	1	0	main
+201	1	stock	Фондовый рынок и рынок депозитов	3	repo	stock_repo_interdealer_m	РЕПО-М - адрес.	1	201	1	0	main
+31	1	stock	Фондовый рынок и рынок депозитов	3	repo	stock_repo_cc	ЦК - РЕПО - адрес.	0	31	0	0	main
+1364	1	stock	Фондовый рынок и рынок депозитов	3	repo	stock_repo_auction	Аукцион РЕПО - адрес.	0	1364	1	0	repo
+1362	1	stock	Фондовый рынок и рынок депозитов	3	repo	stock_repo_mdf_limits	Лимит РЕПО с ДФМ - адрес.	0	1362	1	0	repo
+63	1	stock	Фондовый рынок и рынок депозитов	28	qnv	stock_qnv_tplus	Т+: Для квал. инвесторов - безадрес.	1	63	0	1	main
+87	1	stock	Фондовый рынок и рынок депозитов	28	qnv	stock_qnv_tplus_usd	Т+: Для квал. инвесторов (USD) - безадрес.	0	87	0	1	main
+60	1	stock	Фондовый рынок и рынок депозитов	28	qnv	stock_qnv_main	Т0: Квал. инвесторы - безадрес.	0	60	0	1	main
+62	1	stock	Фондовый рынок и рынок депозитов	28	qnv	stock_qnv_repo	РЕПО: Для квал. инвесторов - адрес.	0	62	0	0	main
+61	1	stock	Фондовый рынок и рынок депозитов	28	qnv	stock_qnv_ndm	РПС: Для квал. инвесторов - адрес.	0	61	0	0	main
+64	1	stock	Фондовый рынок и рынок депозитов	28	qnv	stock_qnv_ndm_tplus	РПС с ЦК: Для квал. инвесторов - адрес.	0	64	0	0	main
+120	1	stock	Фондовый рынок и рынок депозитов	36	mamc	stock_mamc_liq	Безадресные сделки с ЦК	1	120	1	1	main
+1082	1	stock	Фондовый рынок и рынок депозитов	36	mamc	stock_nonresmamc_liq	Урегулирование с ЦК Нерезиденты - безадрес.	0	1082	1	1	nonres
+265	1	stock	Фондовый рынок и рынок депозитов	47	foreignshares	stock_foreign_shares	Т+ Ин.Акции и ДР - безадрес.	1	265	1	1	main
+292	1	stock	Фондовый рынок и рынок депозитов	47	foreignshares	stock_foreignshares_tplus_usd	Т+: Ин.Акции и ДР (USD) - безадрес.	0	292	1	1	main
+1206	1	stock	Фондовый рынок и рынок депозитов	47	foreignshares	stock_foreignshares_tplus_cny	Т+: Ин.Акции и ДР (CNY) - безадрес.	0	1206	1	1	main
+1229	1	stock	Фондовый рынок и рынок депозитов	47	foreignshares	stock_foreignshares_tplus_hkd	Т+: Ин.Акции и ДР (HKD) - безадрес.	0	1229	1	1	main
+267	1	stock	Фондовый рынок и рынок депозитов	49	foreignndm	stock_foreign_ccp	РПС с ЦК: Ин.Акции и ДР - адрес.	0	267	1	0	main
+269	1	stock	Фондовый рынок и рынок депозитов	49	foreignndm	stock_foreign_ndm	РПС: Ин.Акции - адрес.	1	269	1	0	main
+294	1	stock	Фондовый рынок и рынок депозитов	49	foreignndm	stock_foreignndm_usd	РПС: Ин.Акции (USD) - адрес.	0	294	1	0	main
+1212	1	stock	Фондовый рынок и рынок депозитов	49	foreignndm	stock_foreign_ndm_cny	РПС: Ин.Акции (CNY) - адрес.	0	1212	1	1	main
+1235	1	stock	Фондовый рынок и рынок депозитов	49	foreignndm	stock_foreign_ndm_hkd	РПС: Ин.Акции (HKD) - адрес.	0	1235	1	0	main
+1209	1	stock	Фондовый рынок и рынок депозитов	49	foreignndm	stock_foreign_ccp_cny	РПС с ЦК: Ин.Акции и ДР (USD) - адрес.	0	1209	1	1	main
+1232	1	stock	Фондовый рынок и рынок депозитов	49	foreignndm	stock_foreign_ccp_hkd	РПС с ЦК: Ин.Акции и ДР (HKD) - адрес.	0	1232	1	0	main
+293	1	stock	Фондовый рынок и рынок депозитов	49	foreignndm	stock_foreignndm_ccp_usd	Т+: РПС с ЦК: Ин.Акции и ДР (USD) - адрес.	0	293	1	0	main
+72	1	stock	Фондовый рынок и рынок депозитов	33	moexboard	stock_moexboard	MOEX Board	1	72	1		main
+187	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_ccp_9m	РЕПО с ЦК с КСУ 9 месяцев - безадрес.	0	187	1	1	main
+189	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_ccp_9m_usd	РЕПО с ЦК с КСУ 9 мес. (USD) - безадрес.	0	189	1	1	main
+191	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_ccp_9m_eur	РЕПО с ЦК с КСУ 9 мес. (EUR) - безадрес.	0	191	1	1	main
+86	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_d	РЕПО с ЦК с КСУ 1 день - безадрес.	1	86	1	1	main
+83	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_w	РЕПО с ЦК с КСУ 7 дн. - безадрес.	0	83	1	1	main
+80	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_2w	РЕПО с ЦК с КСУ 14 дн. - безадрес.	0	80	1	1	main
+84	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_m	РЕПО с ЦК с КСУ 1 месяц - безадрес.	0	84	1	1	main
+81	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_2m	РЕПО с ЦК с КСУ 2 месяца - безадрес.	0	81	1	1	main
+85	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_3m	РЕПО с ЦК с КСУ 3 месяца - безадрес.	0	85	1	1	main
+103	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_6m	РЕПО с ЦК с КСУ 6 мес. - безадрес.	0	103	1	1	main
+102	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_1y	РЕПО с ЦК с КСУ 1 год - безадрес.	0	102	1	1	main
+82	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_ndm	РЕПО с ЦК с КСУ - адрес.	0	82	1	0	main
+111	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_d_usd	РЕПО с ЦК с КСУ 1 день (USD) - безадрес.	0	111	1	1	main
+112	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_w_usd	РЕПО с ЦК с КСУ 7 дн. (USD) - безадрес.	0	112	1	1	main
+113	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_2w_usd	РЕПО с ЦК с КСУ 14 дн. (USD) - безадрес.	0	113	1	1	main
+114	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_m_usd	РЕПО с ЦК с КСУ 1 месяц (USD) - безадрес.	0	114	1	1	main
+115	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_2m_usd	РЕПО с ЦК с КСУ 2 месяца (USD) - безадрес.	0	115	1	1	main
+116	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_3m_usd	РЕПО с ЦК с КСУ 3 месяца (USD) - безадрес.	0	116	1	1	main
+117	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_6m_usd	РЕПО с ЦК с КСУ 6 месяцев (USD) - безадрес.	0	117	1	1	main
+118	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_1y_usd	РЕПО с ЦК с КСУ 1 год (USD) - безадрес.	0	118	1	1	main
+119	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_ndm_usd	РЕПО с ЦК с КСУ (USD) - адрес.	0	119	1	0	main
+127	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_d_eur	РЕПО с ЦК с КСУ 1 день (EUR) - безадрес.	0	127	1	1	main
+128	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_w_eur	РЕПО с ЦК с КСУ 7 дн. (EUR) - безадрес.	0	128	1	1	main
+129	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_2w_eur	РЕПО с ЦК с КСУ 14 дн. (EUR) - безадрес.	0	129	1	1	main
+130	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_m_eur	РЕПО с ЦК с КСУ 1 месяц (EUR) - безадрес.	0	130	1	1	main
+131	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_2m_eur	РЕПО с ЦК с КСУ 2 месяца (EUR) - безадрес.	0	131	1	1	main
+132	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_3m_eur	РЕПО с ЦК с КСУ 3 месяца (EUR) - безадрес.	0	132	1	1	main
+133	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_6m_eur	РЕПО с ЦК с КСУ 6 месяцев (EUR) - безадрес.	0	133	1	1	main
+134	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_1y_eur	РЕПО с ЦК с КСУ 1 год (EUR) - безадрес.	0	134	1	1	main
+135	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_ndm_eur	РЕПО с ЦК с КСУ (EUR) - адрес.	0	135	1	0	main
+1122	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_d_cny	РЕПО с ЦК с КСУ 1 день (CNY) - безадрес.	0	1122	1	1	main
+1124	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_w_cny	РЕПО с ЦК с КСУ 7 дней (CNY) - безадрес.	0	1124	1	1	main
+1126	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_2w_cny	РЕПО с ЦК с КСУ 14 дней (CNY) - безадрес.	0	1126	1	1	main
+1128	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_1m_cny	РЕПО с ЦК с КСУ 1 месяц (CNY) - безадрес.	0	1128	1	1	main
+1130	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_2m_cny	РЕПО с ЦК с КСУ 2 месяца (CNY) - безадрес.	0	1130	1	1	main
+1132	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_3m_cny	РЕПО с ЦК с КСУ 3 месяца (CNY) - безадрес.	0	1132	1	1	main
+1134	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_6m_cny	РЕПО с ЦК с КСУ 6 месяцев (CNY) - безадрес.	0	1134	1	1	main
+1136	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_9m_cny	РЕПО с ЦК с КСУ 9 месяцев (CNY) - безадрес.	0	1136	1	1	main
+1138	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_1y_cny	РЕПО с ЦК с КСУ 1 год (CNY) - безадрес.	0	1138	1	1	main
+1140	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_ndm_cny	РЕПО с ЦК с КСУ (CNY) - адрес.	0	1140	1	0	main
+1156	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_1w_rub	РЕПО с ЦК с КСУ пл. 7 дней - безадрес. (RUSFAR)	0	1156	1	1	main
+1158	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_2w_rub	РЕПО с ЦК с КСУ пл. 14 дней - безадрес. (RUSFAR)	0	1158	1	1	main
+1160	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_1m_rub	РЕПО с ЦК с КСУ пл. 1 месяц - безадрес. (RUSFAR)	0	1160	1	1	main
+1162	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_2m_rub	РЕПО с ЦК с КСУ пл. 2 месяца - безадрес. (RUSFAR)	0	1162	1	1	main
+1164	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_3m_rub	РЕПО с ЦК с КСУ пл. 3 месяца - безадрес. (RUSFAR)	0	1164	1	1	main
+1166	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_6m_rub	РЕПО с ЦК с КСУ пл. 6 месяца - безадрес. (RUSFAR)	0	1166	1	1	main
+1168	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_9m_rub	РЕПО с ЦК с КСУ пл. 9 месяца - безадрес. (RUSFAR)	0	1168	1	1	main
+1170	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_1y_rub	РЕПО с ЦК с КСУ пл. 1 год - безадрес. (RUSFAR)	0	1170	1	1	main
+1188	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_1w_cny	РЕПО с ЦК с КСУ пл. 7 дней (CNY) - безадрес. (RUSFARCNY)	0	1188	1	1	main
+1190	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_2w_cny	РЕПО с ЦК с КСУ пл. 14 дней (CNY) - безадрес. (RUSFARCNY)	0	1190	1	1	main
+1192	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_1m_cny	РЕПО с ЦК с КСУ пл. 1 месяц (CNY) - безадрес. (RUSFARCNY)	0	1192	1	1	main
+1194	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_2m_cny	РЕПО с ЦК с КСУ пл. 2 месяца (CNY) - безадрес. (RUSFARCNY)	0	1194	1	1	main
+1196	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_3m_cny	РЕПО с ЦК с КСУ пл. 3 месяца (CNY) - безадрес. (RUSFARCNY)	0	1196	1	1	main
+1198	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_6m_cny	РЕПО с ЦК с КСУ пл. 6 месяца (CNY) - безадрес. (RUSFARCNY)	0	1198	1	1	main
+1200	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_9m_cny	РЕПО с ЦК с КСУ пл. 9 месяца (CNY) - безадрес. (RUSFARCNY)	0	1200	1	1	main
+1202	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_1y_cny	РЕПО с ЦК с КСУ пл. 1 год (CNY) - безадрес. (RUSFARCNY)	0	1202	1	1	main
+1312	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_rr_1m_rub	РЕПО с ЦК с КСУ пл. КлСт 1 мес. - безадрес. (RREFKEYR)	0	1312	1	1	main
+1313	1	stock	Фондовый рынок и рынок депозитов	46	gcc	stock_gcc_fl_rr_3m_rub	РЕПО с ЦК с КСУ пл. КлСт 3 мес. - безадрес. (RREFKEYR)	0	1313	1	1	main
+275	1	stock	Фондовый рынок и рынок депозитов	54	credit	stock_credit_rub	Кредиты RUB - адрес.	1	275	1	0	main
+277	1	stock	Фондовый рынок и рынок депозитов	54	credit	stock_credit_usd	Кредиты USD - адрес.	0	277	1	0	main
+279	1	stock	Фондовый рынок и рынок депозитов	54	credit	stock_credit_eur	Кредиты EUR - адрес.	0	279	1	0	main
+1146	1	stock	Фондовый рынок и рынок депозитов	54	credit	stock_credit_cny	Кредиты CNY - адрес.	0	1146	1	0	main
+1056	1	stock	Фондовый рынок и рынок депозитов	1015	nonresndm	stock_nonresndm_shares_tplus_rub	РПС с ЦК Нерезиденты: Акции и ДР - адрес.	1	1056	1	0	nonres
+1058	1	stock	Фондовый рынок и рынок депозитов	1015	nonresndm	stock_nonresndm_shares_tplus_usd	РПС с ЦК Нерезиденты: Акции и ДР (USD) - адрес.	0	1058	1	0	nonres
+1060	1	stock	Фондовый рынок и рынок депозитов	1015	nonresndm	stock_nonresndm_shares_tplus_eur	РПС с ЦК Нерезиденты: Акции и ДР (EUR) - адрес.	0	1060	1	0	nonres
+1062	1	stock	Фондовый рынок и рынок депозитов	1015	nonresndm	stock_nonresndm_bonds_tplus_rub	РПС с ЦК Нерезиденты: Облигации - адрес.	0	1062	1	0	nonres
+1064	1	stock	Фондовый рынок и рынок депозитов	1015	nonresndm	stock_nonresndm_bonds_tplus_cny	РПС с ЦК Нерезиденты: Облигации (CNY) - адрес.	0	1064	1	0	nonres
+1066	1	stock	Фондовый рынок и рынок депозитов	1015	nonresndm	stock_nonresndm_bonds_tplus_usd	РПС с ЦК Нерезиденты: Облигации (USD) - адрес.	0	1066	1	0	nonres
+1068	1	stock	Фондовый рынок и рынок депозитов	1015	nonresndm	stock_nonresndm_bonds_tplus_eur	РПС с ЦК Нерезиденты: Облигации (EUR) - адрес.	0	1068	1	0	nonres
+1071	1	stock	Фондовый рынок и рынок депозитов	1017	nonresrepo	stock_nonresrepo_interdealer_rub	РЕПО-M Нерезиденты - адрес.	1	1071	1	0	nonres
+1073	1	stock	Фондовый рынок и рынок депозитов	1017	nonresrepo	stock_nonresrepo_interdealer_usd	РЕПО-M Нерезиденты (USD) - адрес.	0	1073	1	0	nonres
+1075	1	stock	Фондовый рынок и рынок депозитов	1017	nonresrepo	stock_nonresrepo_interdealer_eur	РЕПО-M Нерезиденты (EUR) - адрес.	0	1075	1	0	nonres
+1077	1	stock	Фондовый рынок и рынок депозитов	1017	nonresrepo	stock_nonresrepo_interdealer_cny	РЕПО-M Нерезиденты (CNY) - адрес.	0	1077	1	0	nonres
+1080	1	stock	Фондовый рынок и рынок депозитов	1019	nonresccp	stock_nonresccp_liq	Урегулирование РЕПО с ЦК Нерезиденты - безадрес.	1	1080	1	1	nonres
+36	1	stock	Фондовый рынок и рынок депозитов	23	standard	stock_standard	Standard - безадрес.	1	36	0	1	main
+40	1	stock	Фондовый рынок и рынок депозитов	23	standard	stock_standard_repo	Standard: РЕПО - адрес.	0	40	0	0	main
+41	1	stock	Фондовый рынок и рынок депозитов	23	standard	standard_ndm	Standard - адрес.	0	41	0	0	main
+43	1	stock	Фондовый рынок и рынок депозитов	25	classica	stock_classica	Classica - безадрес.	1	43	0	1	main
+44	1	stock	Фондовый рынок и рынок депозитов	25	classica	stock_classica_ndm	Classica - адрес.	0	44	0	0	main
+12	2	state	Рынок ГЦБ (размещение)	9	index	state_index	Индексы ГКО/ОФЗ	1	12	0		main
+10	2	state	Рынок ГЦБ (размещение)	6	bonds	state	Основной режим	1	10	0		main
+3	2	state	Рынок ГЦБ (размещение)	7	repo	dealer_dealer	Сделки междилерского РЕПО	1	3	0		main
+11	2	state	Рынок ГЦБ (размещение)	8	ndm	state_ndm	Внесистемные сделки	1	11	0		main
+1342	3	currency	Валютный рынок	1341	otcindices	currency_otcindices_fixing	Внебиржевые индикаторы - фиксинги	1	1342	1		main
+1344	3	currency	Валютный рынок	1341	otcindices	currency_otcindices_rates	Внебиржевые индикаторы - котировки	0	1344	1		main
+1349	3	currency	Валютный рынок	1341	otcindices	currency_otcindices_books	Внебиржевые индикаторы - стаканы	0	1349	1		main
+13	3	currency	Валютный рынок	10	selt	currency	Системные сделки - безадрес.	1	13	1	1	main
+100	3	currency	Валютный рынок	10	selt	currency_fixing	Фиксинг системный - безадрес.	0	100	1	1	main
+46	3	currency	Валютный рынок	10	selt	currency_ndm	Внесистемные сделки - адрес.	0	46	1	0	main
+151	3	currency	Валютный рынок	10	selt	currency_selt_licu	Внесистемные сделки урегулирования - безадрес.	0	151	1	1	main
+101	3	currency	Валютный рынок	10	selt	currency_fixing_ndm	Фиксинг внесистемный - адрес.	0	101	1	0	main
+149	3	currency	Валютный рынок	10	selt	currency_selt_waps	Системные средневзвешенные - безадрес.	0	149	1	1	main
+150	3	currency	Валютный рынок	10	selt	currency_selt_wapn	Внесистемные средневзвешенные - адрес.	0	150	1	0	main
+70	3	currency	Валютный рынок	10	selt	currency_selt_cbr	Аукцион ЦБР - адрес.	0	70	1	0	main
+140	3	currency	Валютный рынок	10	selt	currency_selt_settle	Поставка	0	140	1		main
+88	3	currency	Валютный рынок	34	futures	currency_futures	Системные фьючерсные контракты  - безадрес.	1	88	0	1	main
+89	3	currency	Валютный рынок	34	futures	currency_futures_ndm	Внесистемные фьючерсные контракты - адрес.	0	89	0	0	main
+165	3	currency	Валютный рынок	41	index	currency_index	Валютный фиксинг	1	165	1		main
+261	3	currency	Валютный рынок	45	otc	currency_otc_liquidity	Рынок OTC	1	261	1		main
+263	3	currency	Валютный рынок	45	otc	currency_otc_darkpools	Рынок OTC крупные сделки	0	263	1		main
+15	4	futures	Срочный рынок	12	main	futures	Срочные инструменты	1	15	0		main
+45	4	futures	Срочный рынок	22	forts	futures_forts	Фьючерсы	1	45	1		main
+35	4	futures	Срочный рынок	24	options	futures_options	Опционы	1	35	1		main
+138	4	futures	Срочный рынок	37	fortsiqs	futures_fortsiqs	Фьючерсы IQS	1	138	0		main
+139	4	futures	Срочный рынок	38	optionsiqs	futures_optionsiqs	Опционы IQS	1	139	0		main
+20	5	commodity	Товарный рынок	18	futures	commodity_futures	Стандартные контракты АО НТБ	1	20	0		main
+24	6	interventions	Товарные интервенции	20	grain	interventions_grain	Интервенции по продаже зерна	1	24	1		main
+141	7	offboard	ОТС-система	39	bonds	offboard_bond_all	ОТС-система: облигации	1	141	0		otc
+271	9	agro	Агро	51	sugar	agro_sugar_all	Агро: Сахар	1	271	1		main
+1032	9	agro	Агро	1031	auctions	agro_auctions_all	Агро: Аукционы НТБ	1	1032	1		main
+1085	9	agro	Агро	1084	buyauctions	agro_buyauctions_all	Агро: Закупочные аукционы НТБ	1	1085	1		main
+1367	9	agro	Агро	1366	saleauctions	agro_saleauctions_all	Товарные интервенции НТБ	1	1367	1		main
+1258	1012	otc	ОТС с ЦК	1257	shares	otc_shares_tplus	ОТС: Акции Т+ - безадресные	1	1258	1	1	otc
+1021	1012	otc	ОТС с ЦК	1013	bonds	otc_bonds_tplus	ОТС: Облигации Т+ - безадресные	1	1021	1	1	otc
+1015	1012	otc	ОТС с ЦК	1013	bonds	otc_bonds_tplus_usd	ОТС: Облигации Т+ (USD) - безадресные	0	1015	1	1	otc
+1260	1012	otc	ОТС с ЦК	1262	sharesndm	otc_ndm_ccp_shares_rub	ОТС: Акции РПС с ЦК - адресные	1	1260	1	0	otc
+1303	1012	otc	ОТС с ЦК	1262	sharesndm	otc_ndm_shares_issuance	OTC: Акции размещение - адресные	0	1303	1	0	otc
+1305	1012	otc	ОТС с ЦК	1262	sharesndm	otc_ndm_shares_buyback	OTC: Акции выкуп - адресные	0	1305	1	0	otc
+1017	1012	otc	ОТС с ЦК	1014	ndm	otc_ndm_ccp_rub	OTC: Облигации с ЦК - двусторонние	1	1017	1	0	otc
+1019	1012	otc	ОТС с ЦК	1014	ndm	otc_ndm_ccp_usd	OTC: Облигации с ЦК (USD) - двусторонние	0	1019	1	0	otc
+1204	1012	otc	ОТС с ЦК	1014	ndm	otc_ndm_ccp_cny	OTC: Облигации с ЦК (CNY) - двусторонние	0	1204	1	0	otc
+1263	1012	otc	ОТС с ЦК	1014	ndm	otc_bondsndm_ccp_ndm_rub	OTC: Облигации с ЦК адрес. - двусторонние	0	1263	1	0	otc
+1265	1012	otc	ОТС с ЦК	1014	ndm	otc_bondsndm_ccp_ndm_cny	OTC: Облигации с ЦК адрес. (CNY) - двусторонние	0	1265	1	0	otc
+1267	1012	otc	ОТС с ЦК	1014	ndm	otc_bondsndm_ccp_ndm_usd	OTC: Облигации с ЦК адрес. (USD) - двусторонние	0	1267	1	0	otc
+1280	1282	quotes	Квоты	1279	bonds	quotes_bonds	Квоты	1	1280	1		quotes
+1332	1326	money	Денежный рынок	1328	repo	money_repo	РЕПО с ФК: закрытая форма	1	1332	1		main
+1329	1326	money	Денежный рынок	1327	deposit	money_deposit	Депозиты ФК, закрытая форма	1	1329	1		main

@@ -28,12 +28,19 @@ class FinData():
         """
         self.df = pd.read_csv(df_path)
 
-        if column_names is not None:
-            self.df = self.df.rename(columns=column_names, errors='ignore')
+        self.df = self.df.rename(columns={'Yandex open' : 'open', 
+                                          'Yandex close' : 'close', 
+                                          'Yandex high' : 'high', 
+                                          'Yandex low' : 'low', 
+                                          'Yandex volume' : 'volume'}, 
+                                 errors='ignore')
         
         self.df.utc = pd.to_datetime(self.df.utc).dt.tz_localize(None)
         self.df.drop_duplicates(inplace=True)
         self.target : str
+
+        self.cat_features = []
+        self.numeric_features = ['open', 'close', 'high', 'low', 'volume']
 
         
     def make_binary_class_target(self):
@@ -44,17 +51,26 @@ class FinData():
         direction: 0, 1 или 2 для обозначения направления изменения цены (вниз, без изменений, вверх).
         """
         # добавляет два варианта таргета - 2 и 3 класса 
-        self.df = pl.from_pandas(self.df)
-        self.df = self.df.with_columns(
-            pl.when(pl.col('close').shift(-1) > pl.col('close')).then(2)
-            .when(pl.col('close').shift(-1) == pl.col('close')).then(1)
-            .otherwise(0)
-            .alias("direction"),
-            pl.when(pl.col('close').shift(-1) > pl.col('close')).then(1)
-            .otherwise(0)
-            .alias("direction_binary")
-        )
-        self.df = self.df.to_pandas()
+
+        # self.df = pl.from_pandas(self.df)
+        # self.df = self.df.with_columns(
+        #     pl.when(pl.col('close').shift(-1) > pl.col('close')).then(2)
+        #     .when(pl.col('close').shift(-1) == pl.col('close')).then(1)
+        #     .otherwise(0)
+        #     .alias("direction"),
+        #     pl.when(pl.col('close').shift(-1) > pl.col('close')).then(1)
+        #     .otherwise(0)
+        #     .alias("direction_binary")
+        # )
+        # self.df = self.df.to_pandas()
+
+        self.df["direction_binary"] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
+
+    def restrict_time_down(self, year=2024, month=9, day=11, date=None):
+        # обрезает датасет по времени ОТ
+        if date is not None:
+            self.df = self.df[self.df >= date]
+            return 
 
     def restrict_time_down(self, year, month, day):
         """
@@ -82,6 +98,11 @@ class FinData():
         self.df = self.df.filter(pl.col("utc") <= pl.datetime(year, month, day))
         self.df = self.df.to_pandas()
 
+    def restrict_time_up_stupidly(self, months=2, days=0):
+        # берёт первую дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
+
+        last_day = self.df['utc'][0] + pd.DateOffset(months=months, days=days)
+        self.restrict_time_up(date=last_day)
 
     def set_target(self, target):
         """
@@ -171,14 +192,31 @@ class FinData():
             self.df[f'high_norms_{i}'] = self.df['high']/self.df['high'].shift(i)
             self.df[f'low_norms_{i}'] = self.df['low']/self.df['low'].shift(i)
 
+            if f'close_norms_{i}' not in self.numeric_features:
+                self.numeric_features += [f'close_norms_{i}', f'close_high_norms_{i}', f'high_norms_{i}', f'low_norms_{i}']
+
     def insert_time_features(self):
         # Добавляет минуты, дни, часы 
         # Убрать может раз вообще незначимо
+                                  
         self.df['hours'] = self.df['utc'].dt.hour
         self.df['day'] = self.df['utc'].dt.day_of_year
         self.df['minute'] = (self.df['utc'].dt.minute + 60 * self.df['hours'])
 
-    def insert_rolling_means(self, windows_ma):
+        if 'hours' not in self.cat_features:
+            self.cat_features += ['hours', 'day', 'minute']
+    
+    def insert_holidays(self):
+    
+        self.df['is_holiday'] = self.df['utc'].dt.strftime('%m-%d').isin(['12-31', '01-01', '01-07', '02-14', '02-23', '03-08', '05-01']).astype('int')
+        self.df['pred_holiday'] = self.df['utc'].dt.strftime('%m-%d').isin(['11-11', '11-30', '12-30', '02-13', '02-22', '03-07', '04-30']).astype('int') # + black friday
+        self.df['week_pred_holiday'] = self.df['utc'].dt.strftime('%m-%d').isin(['12-24', '02-07', '02-16', '03-01', '04-24']).astype('int')
+
+        if 'is_holiday' not in self.cat_features:
+            self.cat_features += ['is_holiday', 'pred_holiday', 'week_pred_holiday']
+
+
+    def insert_rolling_means(self, windows_ma = [3, 6, 18]):
         """
         Добавляет скользящие средние для указанных окон.
 
@@ -189,8 +227,11 @@ class FinData():
         for i in windows_ma:
             self.df[f'ma_{i}'] = self.df['close'].rolling(window = i, closed="left").mean()
             self.df[f'close_normed_ma_{i}'] = self.df['close']/self.df[f'ma_{i}']
+
+            if f'ma_{i}' not in self.numeric_features:
+                self.numeric_features += [f'ma_{i}', f'close_normed_ma_{i}']
             
-    def insert_exp_rolling_means(self, windows_ema):
+    def insert_exp_rolling_means(self, windows_ema = [3, 6, 18]):
         """
         Добавляет экспоненциальные скользящие средние для указанных окон.
 
@@ -200,12 +241,77 @@ class FinData():
         # экспоненциальные скользящие средние
         for i in windows_ema:
             self.df[f'ema_{i}'] = (self.df['close']).ewm(span=i).mean()
-            self.df[f'close_normed_ema_{i}'] = self.df['open']/self.df[f'ema_{i}']
+            self.df[f'close_normed_ema_{i}'] = self.df['close']/self.df[f'ema_{i}']
+
+            if f'ema_{i}' not in self.numeric_features:
+                self.numeric_features += [f'ema_{i}', f'close_normed_ema_{i}']
+    
+    def insert_rsi(self, windows_rsi = [3, 6, 18]):
+        for i in windows_rsi:
+            self.df[f'rsi_{i}'] = self.df['close'] - self.df['close'].shift(i)
+            self.df[f'close_normed_rsi_{i}'] = self.df['close']/self.df[f'rsi_{i}']
+
+            if f'rsi_{i}' not in self.numeric_features:
+                self.numeric_features += [f'rsi_{i}', f'close_normed_rsi_{i}']
+    
+    def insert_bollinger(self): # TODO add other windows
+        if 'ma_16' not in self.df.columns:
+            self.insert_rolling_means([16])
+        self.df['SD'] =np.sqrt(np.square((self.df["ma_16"] - self.df["close"])).rolling(16, closed='left').sum())
+        self.df['upper_bollinger'] = self.df["ma_16"] + self.df['SD'] * 2
+        self.df['low_bollinger'] = self.df["ma_18"] - self.df['SD'] * 2
+
+        self.df['close_normed_upper_bollinger'] = self.df['close']/self.df['upper_bollinger']
+        self.df['close_normed_low_bollinger'] = self.df['close']/self.df['low_bollinger']
+
+        if 'SD' not in self.numeric_features:
+                self.numeric_features += ['SD', 'low_bollinger', 'upper_bollinger', 'close_normed_upper_bollinger', 'close_normed_low_bollinger']
+    
+    def insert_high_low_diff(self, windows_hl = [3, 6, 18]):
+        for i in windows_hl:
+            self.df[f'hl_diff_{i}'] = self.df['high'].shift(i) - self.df['low'].shift(i)
+            self.df[f'close_normed_hl_diff_{i}'] = self.df['close']/self.df[f'hl_diff_{i}']
+
+            if f'hl_diff_{i}' not in self.numeric_features:
+                self.numeric_features += [f'hl_diff_{i}', f'close_normed_hl_diff_{i}']
+    
+    def insert_stochastic_oscillator(self, windows_st = [3, 6, 18]): # TODO add other windows
+
+        self.df['stochastic_oscillator'] = (self.df['close'] - self.df['low'].shift(18)) / (self.df['high'].shift(18) - self.df['low'].shift(18))
+        self.df['close_normed_stochastic_oscillator'] = self.df['close'] / self.df['stochastic_oscillator']
+        
+        if 'stochastic_oscillator' not in self.numeric_features:
+            self.numeric_features += ['stochastic_oscillator', 'close_normed_stochastic_oscillator']
+
+        for i in windows_st:
+            self.df[f'stochastic_oscillator_ma_{i}'] = self.df['stochastic_oscillator'].rolling(i).mean()
+            self.df[f'close_normed_stochastic_oscillator_ma_{i}'] = self.df['close'] / self.df[f'stochastic_oscillator_ma_{i}']
+
+            if f'stochastic_oscillator_ma_{i}' not in self.numeric_features:
+                self.numeric_features += [f'stochastic_oscillator_ma_{i}', f'close_normed_stochastic_oscillator_ma_{i}']
+    
+    def insert_random_prediction(self): # TODO think, if other normalization is needed
+        self.df['target_predict'] = np.exp(np.log1p(self.df['close'].shift(15)) + 4 * np.random.normal(1)) - self.df['close']
+        if 'target_predict' not in self.numeric_features:
+            self.numeric_features += ['target_predict']
+    
+    def insert_all(self, common_windows= None):
+        if common_windows is None:
+            common_windows = [3, 6, 18]
+        self.insert_shifts_norms(common_windows)
+        self.insert_time_features()
+        self.insert_holidays()
+        self.insert_rolling_means(common_windows)
+        self.insert_exp_rolling_means(common_windows)
+        self.insert_rsi(common_windows)
+        self.insert_bollinger()
+        self.insert_high_low_diff(common_windows)
+        self.insert_stochastic_oscillator(common_windows)
+        self.insert_random_prediction()
 
     def get_columns(self):
         return self.df.columns
-
-
+    
     def check_stationarity(self, columns):
         """
         Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
@@ -243,7 +349,3 @@ class FinData():
             else:
                 print(f"Столбец '{column}' не найден в DataFrame.")
     
-
-
-
-
