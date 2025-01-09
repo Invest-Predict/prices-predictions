@@ -3,12 +3,13 @@ import polars as pl
 import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
-# from arch.unitroot import PhillipsPerron
-# from statsmodels.tsa.stattools import adfuller
+from arch.unitroot import PhillipsPerron
+from statsmodels.tsa.stattools import adfuller
+from datetime import date
 
 # Здесь все признаки и все по датафрейму
 
-# to do: визуализации свечей в visualize_time_frame 
+# to do:
 # Добавить все признаки, которые можно сюда добавить 
 
 
@@ -116,7 +117,8 @@ class FinData():
     def visualize_time_frame(self,
                              year_start, month_start, day_start, 
                              year_end, month_end, day_end, 
-                             column, type="line"):
+                             columns = ['candle'], candle_freq=None,
+                             cmap=None, line_kwargs=None):
         """
         Визуализирует данные за указанный временной интервал.
 
@@ -127,15 +129,54 @@ class FinData():
             year_end (int): Год конца.
             month_end (int): Месяц конца.
             day_end (int): День конца.
-            column (str): Название столбца для визуализации.
-            type (str): Тип графика (по умолчанию "line").
+            columns (list(str)): Список столбцов, которые нужно визуализировать; 'candle' визуализирует свечи целиком.
+            candle_freq (str): Частота свечей, которую передаем в pd.Grouper. None - не меняем интервал.
+            cmap (str | Colormap): Название или объект Colormap. 
+            line_kwargs (dict): Аргументы, которые передаются в plt.plot.
         """
+        if line_kwargs is None:
+            line_kwargs = {}
+
+        if cmap is not None:
+            cmap = plt.get_cmap(cmap)
+
         vis_data = pl.from_pandas(self.df)
         vis_data = vis_data.filter((pl.col("utc") <= pl.datetime(year_end, month_end, day_end)) 
                                    & (pl.col("utc") >= pl.datetime(year_start, month_start, day_start)))
         vis_data = vis_data.to_pandas()
         plt.figure(figsize=(12, 6))
-        plt.plot(vis_data['utc'], vis_data[column], label=f'Data {column}')
+        for i, column in enumerate(columns):
+            if column == 'candle':
+                candle_vis_data = vis_data.set_index('utc')[['open', 'close', 'high', 'low']]
+                if candle_freq is not None:
+                    candle_vis_data = candle_vis_data.groupby(pd.Grouper(freq=candle_freq)).agg({'open': 'first', 'close': 'last', 'high': 'max', 'low': 'min'})
+                
+                up = candle_vis_data[candle_vis_data['close'] > candle_vis_data['open']].dropna()
+                down = candle_vis_data[candle_vis_data['close'] < candle_vis_data['open']].dropna()
+
+                num_days = (date(year_end, month_end, day_end) - date(year_start, month_start, day_start)).days + 1
+
+                width_wide = num_days / (len(candle_vis_data) + 3)
+                width_narrow = width_wide / 5
+                edge_width = 40 / (len(candle_vis_data) + 3)
+
+                col_up = 'green'
+                col_down = 'red'
+                edge_color = 'black'
+
+                plt.bar(up.index, up['high']-up['low'], width_narrow, bottom=up['low'], color=col_up, edgecolor=edge_color, linewidth=edge_width) 
+                plt.bar(up.index, up['close']-up['open'], width_wide, bottom=up['open'], color=col_up, edgecolor=edge_color, linewidth=edge_width)
+
+                plt.bar(down.index, down['high']-down['low'], width_narrow, bottom=down['low'], color=col_down, edgecolor=edge_color, linewidth=edge_width) 
+                plt.bar(down.index, down['open']-down['close'], width_wide, bottom=down['close'], color=col_down, edgecolor=edge_color, linewidth=edge_width)
+
+            else:
+                if cmap is not None:
+                    line_kwargs['color'] = cmap(i / max(1, len(columns) - 1))
+                plt.plot(vis_data['utc'], vis_data[column], label=column, **line_kwargs)
+
+        plt.legend(facecolor='lightgrey', edgecolor='black', title='Columns')
+
     
     # Добавление признаков 
     def insert_shifts_norms(self, windows_shifts_norms):
@@ -270,46 +311,41 @@ class FinData():
 
     def get_columns(self):
         return self.df.columns
-
-
-    # def check_stationarity(self, columns):
-    #     """
-    #     Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
-    #     теста Дики-Фуллера (ADF).
-
-    #     Параметры:
-    #         columns (list): Список названий столбцов для проверки на стационарность.
-
-    #     Выводит результаты тестов для каждого столбца. Если хотя бы один тест обнаруживает
-    #     нестационарность, выводит сообщение с указанием тестов и их p-value.
-    #     """
-    #     for column in columns:
-    #         if column in self.df.columns:
-    #             series = self.df[column].dropna()
-
-    #             # Результаты тестов
-    #             pp_result = PhillipsPerron(series)
-    #             adf_result = adfuller(series, autolag='AIC')
-
-    #             # Проверка p-value для каждого теста
-    #             non_stationary_tests = []
-
-    #             if pp_result.pvalue > 0.05:
-    #                 non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
-
-    #             if adf_result[1] > 0.05:
-    #                 non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
-
-    #             # Вывод результатов
-    #             if non_stationary_tests:
-    #                 print(f"Столбец: {column}")
-    #                 print("  Нестационарность обнаружена в следующих тестах:")
-    #                 for test in non_stationary_tests:
-    #                     print(f"    - {test}")
-    #         else:
-    #             print(f"Столбец '{column}' не найден в DataFrame.")
     
+    def check_stationarity(self, columns):
+        """
+        Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
+        теста Дики-Фуллера (ADF).
 
+        Параметры:
+            columns (list): Список названий столбцов для проверки на стационарность.
 
+        Выводит результаты тестов для каждого столбца. Если хотя бы один тест обнаруживает
+        нестационарность, выводит сообщение с указанием тестов и их p-value.
+        """
+        for column in columns:
+            if column in self.df.columns:
+                series = self.df[column].dropna()
 
+                # Результаты тестов
+                pp_result = PhillipsPerron(series)
+                adf_result = adfuller(series, autolag='AIC')
 
+                # Проверка p-value для каждого теста
+                non_stationary_tests = []
+
+                if pp_result.pvalue > 0.05:
+                    non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
+
+                if adf_result[1] > 0.05:
+                    non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
+
+                # Вывод результатов
+                if non_stationary_tests:
+                    print(f"Столбец: {column}")
+                    print("  Нестационарность обнаружена в следующих тестах:")
+                    for test in non_stationary_tests:
+                        print(f"    - {test}")
+            else:
+                print(f"Столбец '{column}' не найден в DataFrame.")
+    
