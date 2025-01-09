@@ -44,7 +44,7 @@ class CatboostFinModel():
         self.args = args
         # запоминает наилучший результат на валидационной выборке 
         self.best_accuracy = 0
-        self.features_best_acuuracy = []
+        self.features_best_accuracy = []
         self.X_train : pd.DataFrame
         self.X_val : pd.DataFrame
         self.y_train : pd.DataFrame
@@ -86,6 +86,7 @@ class CatboostFinModel():
         self.model.fit(self.X_train, self.y_train, eval_set=Pool(self.X_val, self.y_val, cat_features = self.cat), cat_features = self.cat)
         # self.print_feature_importances()
         # self.visualise_shap_values()
+        return self
 
     def predict(self, X_test):
         """
@@ -135,7 +136,7 @@ class CatboostFinModel():
         zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
         ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
 
-        print(f"Точность константного предсказания {zeroes/(ones + zeroes)}")
+        print(f"Точность константного предсказания {max(zeroes, ones)/(ones + zeroes)}")
 
     def print_feature_importances(self):
         """
@@ -166,8 +167,8 @@ class CatboostFinModel():
         shap.summary_plot(shap_values, self.X_train)
 
 
-    def optuna_chose_time(self, 
-                          valid_date : dt.datetime, days_num = 15, interval_num = 10, metric = "Accuracy"):
+    def optuna_choose_time(self, 
+                          valid_date : dt.datetime, days_num = 15, interval_num = 10, metric = "Accuracy", num_trials=20):
         """
         Выполняет оптимизацию времени валидации с использованием Optuna.
 
@@ -218,25 +219,10 @@ class CatboostFinModel():
             return accuracy
     
         study = optuna.create_study(direction="maximize", pruner=pruner, storage=storage, load_if_exists=True)
-        study.optimize(objective, n_trials=20)
+        study.optimize(objective, n_trials=num_trials)
 
         best_params = study.best_params
         print(f"Лучшее количество дней: {best_params['days_from_date']}")
         print(f"Лучший результат: {study.best_value}")
 
         return best_params
-        
-
-
-
-
-
-
-
-
-    
-        
-
-
-        
-    

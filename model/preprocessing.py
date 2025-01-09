@@ -46,8 +46,8 @@ class Scaler(Enum):
     """
     Перечисление для выбора метода скейлинга данных.
     """
-    Standart = StandardScaler()
-    Power = PowerTransformer()
+    Standard = StandardScaler
+    Power = PowerTransformer
 
 def scale_num_data(data, numeric, scaler : Scaler):
     """
@@ -61,7 +61,7 @@ def scale_num_data(data, numeric, scaler : Scaler):
     Возвращает:
         pd.DataFrame: Данные с масштабированными числовыми признаками.
     """
-    scale_model = scaler.value
+    scale_model = scaler.value()
     transformed_data = data.copy()
     transformed_data[numeric] = scale_model.fit(transformed_data[numeric]).transform(transformed_data[numeric])
     return transformed_data
