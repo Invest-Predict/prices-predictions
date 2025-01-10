@@ -6,11 +6,19 @@ import numpy as np
 from arch.unitroot import PhillipsPerron
 from statsmodels.tsa.stattools import adfuller
 from datetime import date
+from scipy.signal import butter, filtfilt
 
 # Здесь все признаки и все по датафрейму
 
 # to do:
 # Добавить все признаки, которые можно сюда добавить 
+
+def butter_filter(data, cutoff_frequency, fs, order=4):
+    nyquist = 0.5 * fs
+    normal_cutoff = cutoff_frequency / nyquist
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return filtfilt(b, a, data)
+
 
 
 class FinData():
@@ -72,7 +80,7 @@ class FinData():
             self.df = self.df[self.df >= date]
             return 
 
-    def restrict_time_down(self, year, month, day):
+    def restrict_time_down(self, year, month, day, date = None):
         """
         Обрезает данные, оставляя только записи начиная с указанной даты.
 
@@ -81,11 +89,14 @@ class FinData():
             month (int): Месяц.
             day (int): День.
         """
+        if date is not None:
+            self.df = self.df[self.df["utc"] >= date].reset_index().drop(columns=['index'])
+            return
         self.df = pl.from_pandas(self.df)
         self.df = self.df.filter(pl.col("utc") >= pl.datetime(year, month, day))
         self.df = self.df.to_pandas()
 
-    def restrict_time_up(self, year, month, day):
+    def restrict_time_up(self, year, month, day, date = None):
         """
         Обрезает данные, оставляя только записи до указанной даты.
 
@@ -94,6 +105,9 @@ class FinData():
             month (int): Месяц.
             day (int): День.
         """
+        if date is not None:
+            self.df = self.df[self.df["utc"] <= date].reset_index().drop(columns=['index'])
+            return
         self.df = pl.from_pandas(self.df)
         self.df = self.df.filter(pl.col("utc") <= pl.datetime(year, month, day))
         self.df = self.df.to_pandas()
@@ -103,6 +117,12 @@ class FinData():
 
         last_day = self.df['utc'][0] + pd.DateOffset(months=months, days=days)
         self.restrict_time_up(date=last_day)
+
+    def restrict_time_down_stupidly(self, months=2, days=0):
+        # берёт последнюю дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
+
+        last_day = self.df['utc'][-1] - pd.DateOffset(months=months, days=days)
+        self.restrict_time_down(date=last_day)
 
     def set_target(self, target):
         """
@@ -179,7 +199,7 @@ class FinData():
 
     
     # Добавление признаков 
-    def insert_shifts_norms(self, windows_shifts_norms):
+    def insert_shifts_norms(self, windows_shifts_norms = [3, 6, 18]):
         """
         Добавляет нормализованные значения цены с учетом сдвигов.
 
@@ -295,6 +315,18 @@ class FinData():
         if 'target_predict' not in self.numeric_features:
             self.numeric_features += ['target_predict']
     
+    def insert_butter_filter(self, fs=144, cutoff_frequency=5, order=4, visualise=False):
+            self.df['butter_filter_trend'] = butter_filter(self.df['close'].values, cutoff_frequency, fs, order)
+            if 'butter_filter_trend' not in self.numeric_features:
+                self.numeric_features += ['butter_filter_trend']
+
+            if visualise:
+                plt.plot(self.df['utc'], self.df['open'], label='Original')
+                plt.plot(self.df['utc'], self.df['butter_filter_trend'], label='Filtered Trend', color='red')
+                plt.xticks(self.df['utc'][::self.df.shape // 10], rotation=45)
+                plt.legend()
+                plt.show()
+            
     def insert_all(self, common_windows= None):
         if common_windows is None:
             common_windows = [3, 6, 18]
@@ -308,6 +340,7 @@ class FinData():
         self.insert_high_low_diff(common_windows)
         self.insert_stochastic_oscillator(common_windows)
         self.insert_random_prediction()
+        self.insert_butter_filter()
 
     def get_columns(self):
         return self.df.columns
