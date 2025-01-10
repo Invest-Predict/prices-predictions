@@ -323,7 +323,7 @@ class FinData():
             if visualise:
                 plt.plot(self.df['utc'], self.df['open'], label='Original')
                 plt.plot(self.df['utc'], self.df['butter_filter_trend'], label='Filtered Trend', color='red')
-                plt.xticks(self.df['utc'][::self.df.shape // 10], rotation=45)
+                plt.xticks(self.df['utc'][::self.df.shape[0] // 10], rotation=45)
                 plt.legend()
                 plt.show()
             
