@@ -74,13 +74,13 @@ class FinData():
 
         self.df["direction_binary"] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
 
-    def restrict_time_down(self, year=2024, month=9, day=11, date=None):
-        # обрезает датасет по времени ОТ
-        if date is not None:
-            self.df = self.df[self.df >= date]
-            return 
+    # def restrict_time_down(self, year=2024, month=9, day=11, date=None):
+    #     # обрезает датасет по времени ОТ
+    #     if date is not None:
+    #         self.df = self.df[self.df >= date]
+    #         return 
 
-    def restrict_time_down(self, year, month, day, date = None):
+    def restrict_time_down(self, year=2024, month=9, day=11, date = None):
         """
         Обрезает данные, оставляя только записи начиная с указанной даты.
 
@@ -96,7 +96,7 @@ class FinData():
         self.df = self.df.filter(pl.col("utc") >= pl.datetime(year, month, day))
         self.df = self.df.to_pandas()
 
-    def restrict_time_up(self, year, month, day, date = None):
+    def restrict_time_up(self, year=2024, month=9, day=11, date = None):
         """
         Обрезает данные, оставляя только записи до указанной даты.
 
@@ -121,7 +121,7 @@ class FinData():
     def restrict_time_down_stupidly(self, months=2, days=0):
         # берёт последнюю дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
 
-        last_day = self.df['utc'][-1] - pd.DateOffset(months=months, days=days)
+        last_day = self.df['utc'].iloc[-1] - pd.DateOffset(months=months, days=days)
         self.restrict_time_down(date=last_day)
 
     def set_target(self, target):
@@ -326,6 +326,17 @@ class FinData():
                 plt.xticks(self.df['utc'][::self.df.shape[0] // 10], rotation=45)
                 plt.legend()
                 plt.show()
+    
+    def insert_trend_rsi(self, windows = [3, 6, 18], filters = ['butter']): # TODO generalize for several filters
+        if 'butter_filter_trend' not in self.df.columns:
+            self.insert_butter_filter()
+        
+        for i in windows:
+            self.df[f'butter_filter_trend_rsi_{i}'] = self.df['butter_filter_trend'] - self.df['butter_filter_trend'].shift(i)
+            self.df[f'close_normed_butter_filter_trend_rsi_{i}'] = self.df['close'] / self.df[f'butter_filter_trend_rsi_{i}']
+
+            if f'butter_filter_trend_rsi_{i}' not in self.numeric_features:
+                self.numeric_features += [f'butter_filter_trend_rsi_{i}', f'close_normed_butter_filter_trend_rsi_{i}']
             
     def insert_all(self, common_windows= None):
         if common_windows is None:
