@@ -10,8 +10,6 @@ import pandas as pd
 
 # Фильтрация, разделение на тренд и цикл 
 
-# Функция для обработки одной строки
-# Лерино я тут поменяю
 def process_row_hp(i, data, lamb):
     trend_open, cycle_open = hpfilter(data["open"][:i + 2], lamb=lamb)
     print(i)

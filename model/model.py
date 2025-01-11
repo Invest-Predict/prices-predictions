@@ -2,13 +2,13 @@ from catboost import CatBoostClassifier, Pool
 import polars as pl
 import pandas as pd
 import numpy as np
-# import shap
+import shap
 import optuna 
 import datetime as dt
 from dateutil.relativedelta import relativedelta
 from optuna.pruners import MedianPruner
 from optuna.storages import RDBStorage
-# from optuna.integration import CatBoostPruningCallback
+from optuna.integration import CatBoostPruningCallback
 from data import FinData
 # from preprocessing import train_valid_split_stupidly
 from sklearn.metrics import accuracy_score
@@ -19,8 +19,6 @@ from sklearn.metrics import accuracy_score
 # кросс-валидация 
 
 # куча признаков и выбираются самые важные 
-
-
 
 # чуть-чуть Лера переделает 
 def restrict_time_down(df, year=2024, month=9, day=11, date=None):
@@ -222,8 +220,7 @@ class CatboostFinModel():
         shap.summary_plot(shap_values, self.X_train)
 
 
-    def optuna_chose_time(self, 
-                          valid_date : dt.datetime, days_num = 15, interval_num = 10, metric = "Accuracy"):
+    def optuna_choose_time(self, valid_date : dt.datetime, days_num = 15, interval_num = 10, metric = "Accuracy"):
         """
         Выполняет оптимизацию времени валидации с использованием Optuna.
 
@@ -235,7 +232,7 @@ class CatboostFinModel():
         """
 
         storage = RDBStorage(url="sqlite:///optuna_trials.db")
-        pruner = MedianPruner(n_min_trials=5)
+        pruner = MedianPruner(n_min_trials=3)
         current_date = valid_date
         self.X_val = self.X_val.drop(columns=["utc"])
 
@@ -266,14 +263,19 @@ class CatboostFinModel():
                 current_y_train, 
                 eval_set=Pool(self.X_val, self.y_val, cat_features=self.cat), 
                 cat_features=self.cat, 
-                verbose=300,  
+                verbose=0,  
                 callbacks=[pruning_callback]
             )
+
+            pruning_callback.check_pruned()
 
             accuracy = model.score(self.X_val, self.y_val)
             return accuracy
     
-    def cross_validation(self, df, cat, n_samples = 3):
+        study = optuna.create_study(direction="maximize", pruner=pruner, storage=storage, load_if_exists=True)
+        study.optimize(objective, n_trials=interval_num)
+
+def cross_validation(self, df, cat, n_samples = 3):
         '''
         данная функция рандомно берёт два месяца начиная с 2024.01.01 и на них обучает, потом тестит на последующих двух дня
         если точность константного предсказания лежит в (0.49, 0.52), то добавляем полученную accuracy к итоговому списку

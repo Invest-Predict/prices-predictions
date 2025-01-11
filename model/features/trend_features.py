@@ -1,5 +1,6 @@
 import pandas as pd
 from scipy.signal import butter, filtfilt
+import matplotlib.pyplot as plt 
 
 def butter_filter(data, cutoff_frequency, fs, order=4):
     nyquist = 0.5 * fs

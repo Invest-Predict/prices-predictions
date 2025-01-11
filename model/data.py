@@ -4,7 +4,7 @@ import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
 from arch.unitroot import PhillipsPerron
-from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import adfuller, zivot_andrews
 from datetime import date
 
 from features.standart_features import StandartFeaturesMixin
@@ -13,11 +13,6 @@ from features.trend_features import TrendFeaturesMixin
 from features.uncommon_features import UncommonFeaturesMixin
 
 # Здесь все признаки и все по датафрейму
-
-# to do:
-# Добавить все признаки, которые можно сюда добавить 
-
-
 
 class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin):
     """
@@ -47,68 +42,19 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
 
         self.cat_features = []
         self.numeric_features = ['open', 'close', 'high', 'low', 'volume']
+        self.make_binary_class_target()
 
         
     def make_binary_class_target(self):
-        """
-        Добавляет два типа таргетов: бинарный и трехклассовый.
-
-        direction_binary: 0 или 1 в зависимости от изменения цены закрытия.
-        direction: 0, 1 или 2 для обозначения направления изменения цены (вниз, без изменений, вверх).
-        """
-        # добавляет два варианта таргета - 2 и 3 класса 
-
-        # self.df = pl.from_pandas(self.df)
-        # self.df = self.df.with_columns(
-        #     pl.when(pl.col('close').shift(-1) > pl.col('close')).then(2)
-        #     .when(pl.col('close').shift(-1) == pl.col('close')).then(1)
-        #     .otherwise(0)
-        #     .alias("direction"),
-        #     pl.when(pl.col('close').shift(-1) > pl.col('close')).then(1)
-        #     .otherwise(0)
-        #     .alias("direction_binary")
-        # )
-        # self.df = self.df.to_pandas()
-
         self.df["direction_binary"] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
 
-    # def restrict_time_down(self, year=2024, month=9, day=11, date=None):
-    #     # обрезает датасет по времени ОТ
-    #     if date is not None:
-    #         self.df = self.df[self.df >= date]
-    #         return 
 
-    def restrict_time_down(self, year=2024, month=9, day=11, date = None):
-        """
-        Обрезает данные, оставляя только записи начиная с указанной даты.
+    def restrict_time_down(self, date : dt.datetime):
+        self.df = self.df[self.df["utc"] >= date].reset_index().drop(columns=['index'])
 
-        Параметры:
-            year (int): Год.
-            month (int): Месяц.
-            day (int): День.
-        """
-        if date is not None:
-            self.df = self.df[self.df["utc"] >= date].reset_index().drop(columns=['index'])
-            return
-        self.df = pl.from_pandas(self.df)
-        self.df = self.df.filter(pl.col("utc") >= pl.datetime(year, month, day))
-        self.df = self.df.to_pandas()
 
-    def restrict_time_up(self, year=2024, month=9, day=11, date = None):
-        """
-        Обрезает данные, оставляя только записи до указанной даты.
-
-        Параметры:
-            year (int): Год.
-            month (int): Месяц.
-            day (int): День.
-        """
-        if date is not None:
-            self.df = self.df[self.df["utc"] <= date].reset_index().drop(columns=['index'])
-            return
-        self.df = pl.from_pandas(self.df)
-        self.df = self.df.filter(pl.col("utc") <= pl.datetime(year, month, day))
-        self.df = self.df.to_pandas()
+    def restrict_time_up(self, date : dt.datetime):
+        self.df = self.df[self.df["utc"] <= date].reset_index().drop(columns=['index'])
 
     def restrict_time_up_stupidly(self, months=2, days=0):
         # берёт первую дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
@@ -219,39 +165,47 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         return self.df.columns
     
     def check_stationarity(self, columns):
-        """
-        Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
-        теста Дики-Фуллера (ADF).
+            """
+            Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
+            теста Дики-Фуллера (ADF), и теста Зиво-Эндрюса (Zivot-Andrews).
 
-        Параметры:
-            columns (list): Список названий столбцов для проверки на стационарность.
+            Параметры:
+                columns (list): Список названий столбцов для проверки на стационарность.
 
-        Выводит результаты тестов для каждого столбца. Если хотя бы один тест обнаруживает
-        нестационарность, выводит сообщение с указанием тестов и их p-value.
-        """
-        for column in columns:
-            if column in self.df.columns:
-                series = self.df[column].dropna()
+            Выводит результаты тестов для каждого столбца. Если хотя бы один тест обнаруживает
+            нестационарность, выводит сообщение с указанием тестов и их p-value.
+            """
+            for column in columns:
+                if column in self.df.columns:
+                    series = self.df[column].dropna()
+                    try:
+                        # результаты тестов
+                        pp_result = PhillipsPerron(series)
+                        adf_result = adfuller(series, autolag='AIC')
+                        
+                        # za_result = zivot_andrews(series, trim=0.15)
 
-                # Результаты тестов
-                pp_result = PhillipsPerron(series)
-                adf_result = adfuller(series, autolag='AIC')
+                        # проверка p-value для каждого теста
+                        non_stationary_tests = []
+                        if pp_result.pvalue > 0.05:
+                            non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
+                        if adf_result[1] > 0.05:
+                            non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
+                        # if za_result and za_result[1] > 0.05:
+                        #     non_stationary_tests.append(f"Zivot-Andrews (p-value: {za_result[1]:.5f})")
 
-                # Проверка p-value для каждого теста
-                non_stationary_tests = []
+                        if non_stationary_tests:
+                            print(f"Столбец: {column}")
+                            print("  Нестационарность обнаружена в следующих тестах:")
+                            for test in non_stationary_tests:
+                                print(f"    - {test}")
+                    except Exception as e:
+                        print(f"Ошибка при обработке столбца '{column}': {e}")
+                else:
+                    print(f"Столбец '{column}' не найден в DataFrame.")
 
-                if pp_result.pvalue > 0.05:
-                    non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
-
-                if adf_result[1] > 0.05:
-                    non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
-
-                # Вывод результатов
-                if non_stationary_tests:
-                    print(f"Столбец: {column}")
-                    print("  Нестационарность обнаружена в следующих тестах:")
-                    for test in non_stationary_tests:
-                        print(f"    - {test}")
-            else:
-                print(f"Столбец '{column}' не найден в DataFrame.")
     
+
+
+
+
