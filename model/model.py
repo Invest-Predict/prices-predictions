@@ -16,8 +16,6 @@ from optuna.integration import CatBoostPruningCallback
 
 # куча признаков и выбираются самые важные 
 
-
-
 # чуть-чуть Лера переделает 
 def restrict_time_down(df, year, month, day):
         # обрезает датасет по времени ОТ
@@ -166,8 +164,7 @@ class CatboostFinModel():
         shap.summary_plot(shap_values, self.X_train)
 
 
-    def optuna_chose_time(self, 
-                          valid_date : dt.datetime, days_num = 15, interval_num = 10, metric = "Accuracy"):
+    def optuna_choose_time(self, valid_date : dt.datetime, days_num = 15, interval_num = 10, metric = "Accuracy"):
         """
         Выполняет оптимизацию времени валидации с использованием Optuna.
 
@@ -179,7 +176,7 @@ class CatboostFinModel():
         """
 
         storage = RDBStorage(url="sqlite:///optuna_trials.db")
-        pruner = MedianPruner(n_min_trials=5)
+        pruner = MedianPruner(n_min_trials=3)
         current_date = valid_date
         self.X_val = self.X_val.drop(columns=["utc"])
 
@@ -210,15 +207,17 @@ class CatboostFinModel():
                 current_y_train, 
                 eval_set=Pool(self.X_val, self.y_val, cat_features=self.cat), 
                 cat_features=self.cat, 
-                verbose=300,  
+                verbose=0,  
                 callbacks=[pruning_callback]
             )
+
+            pruning_callback.check_pruned()
 
             accuracy = model.score(self.X_val, self.y_val)
             return accuracy
     
         study = optuna.create_study(direction="maximize", pruner=pruner, storage=storage, load_if_exists=True)
-        study.optimize(objective, n_trials=20)
+        study.optimize(objective, n_trials=interval_num)
 
         best_params = study.best_params
         print(f"Лучшее количество дней: {best_params['days_from_date']}")

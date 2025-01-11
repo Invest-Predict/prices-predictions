@@ -4,7 +4,7 @@ import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
 from arch.unitroot import PhillipsPerron
-from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import adfuller, zivot_andrews
 
 # Здесь все признаки и все по датафрейму
 
@@ -59,30 +59,14 @@ class FinData():
         )
         self.df = self.df.to_pandas()
 
-    def restrict_time_down(self, year, month, day):
-        """
-        Обрезает данные, оставляя только записи начиная с указанной даты.
-
-        Параметры:
-            year (int): Год.
-            month (int): Месяц.
-            day (int): День.
-        """
+    def restrict_time_down(self, data : dt.datetime):
         self.df = pl.from_pandas(self.df)
-        self.df = self.df.filter(pl.col("utc") >= pl.datetime(year, month, day))
+        self.df = self.df.filter(pl.col("utc") >= data)
         self.df = self.df.to_pandas()
 
-    def restrict_time_up(self, year, month, day):
-        """
-        Обрезает данные, оставляя только записи до указанной даты.
-
-        Параметры:
-            year (int): Год.
-            month (int): Месяц.
-            day (int): День.
-        """
+    def restrict_time_up(self, data : dt.datetime):
         self.df = pl.from_pandas(self.df)
-        self.df = self.df.filter(pl.col("utc") <= pl.datetime(year, month, day))
+        self.df = self.df.filter(pl.col("utc") <= data)
         self.df = self.df.to_pandas()
 
 
@@ -121,6 +105,9 @@ class FinData():
         plt.plot(vis_data['utc'], vis_data[column], label=f'Data {column}')
     
     # Добавление признаков 
+    def insert_stat_close_price(self):
+        self.df["stat_close_price"] = self.df["close"]/self.df["close"].shift()
+
     def insert_shifts_norms(self, windows_shifts_norms):
         """
         Добавляет нормализованные значения цены с учетом сдвигов.
@@ -170,41 +157,42 @@ class FinData():
 
 
     def check_stationarity(self, columns):
-        """
-        Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
-        теста Дики-Фуллера (ADF).
+            """
+            Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
+            теста Дики-Фуллера (ADF), и теста Зиво-Эндрюса (Zivot-Andrews).
 
-        Параметры:
-            columns (list): Список названий столбцов для проверки на стационарность.
+            Параметры:
+                columns (list): Список названий столбцов для проверки на стационарность.
 
-        Выводит результаты тестов для каждого столбца. Если хотя бы один тест обнаруживает
-        нестационарность, выводит сообщение с указанием тестов и их p-value.
-        """
-        for column in columns:
-            if column in self.df.columns:
-                series = self.df[column].dropna()
+            Выводит результаты тестов для каждого столбца. Если хотя бы один тест обнаруживает
+            нестационарность, выводит сообщение с указанием тестов и их p-value.
+            """
+            for column in columns:
+                if column in self.df.columns:
+                    series = self.df[column].dropna()
 
-                # Результаты тестов
-                pp_result = PhillipsPerron(series)
-                adf_result = adfuller(series, autolag='AIC')
+                    # результаты тестов
+                    pp_result = PhillipsPerron(series)
+                    adf_result = adfuller(series, autolag='AIC')
+                    za_result = zivot_andrews(series, trim=0.15)
 
-                # Проверка p-value для каждого теста
-                non_stationary_tests = []
+                    # проверка p-value для каждого теста
+                    non_stationary_tests = []
+                    if pp_result.pvalue > 0.05:
+                        non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
+                    if adf_result[1] > 0.05:
+                        non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
+                    if za_result and za_result[1] > 0.05:
+                        non_stationary_tests.append(f"Zivot-Andrews (p-value: {za_result[1]:.5f})")
 
-                if pp_result.pvalue > 0.05:
-                    non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
+                    if non_stationary_tests:
+                        print(f"Столбец: {column}")
+                        print("  Нестационарность обнаружена в следующих тестах:")
+                        for test in non_stationary_tests:
+                            print(f"    - {test}")
+                else:
+                    print(f"Столбец '{column}' не найден в DataFrame.")
 
-                if adf_result[1] > 0.05:
-                    non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
-
-                # Вывод результатов
-                if non_stationary_tests:
-                    print(f"Столбец: {column}")
-                    print("  Нестационарность обнаружена в следующих тестах:")
-                    for test in non_stationary_tests:
-                        print(f"    - {test}")
-            else:
-                print(f"Столбец '{column}' не найден в DataFrame.")
     
 
 
