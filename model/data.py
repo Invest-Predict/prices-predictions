@@ -317,12 +317,14 @@ class FinData():
     
     def insert_butter_filter(self, fs=144, cutoff_frequency=5, order=4, visualise=False):
             self.df['butter_filter_trend'] = butter_filter(self.df['close'].values, cutoff_frequency, fs, order)
+            self.df['butter_filter_std'] = self.df['close'] - self.df['butter_filter_trend']
             if 'butter_filter_trend' not in self.numeric_features:
-                self.numeric_features += ['butter_filter_trend']
+                self.numeric_features += ['butter_filter_trend', 'butter_filter_std']
 
             if visualise:
                 plt.plot(self.df['utc'], self.df['open'], label='Original')
                 plt.plot(self.df['utc'], self.df['butter_filter_trend'], label='Filtered Trend', color='red')
+                plt.plot(self.df['utc'], self.df['butter_filter_std'], label='Short Term Component', color='blue')
                 plt.xticks(self.df['utc'][::self.df.shape[0] // 10], rotation=45)
                 plt.legend()
                 plt.show()
@@ -337,6 +339,28 @@ class FinData():
 
             if f'butter_filter_trend_rsi_{i}' not in self.numeric_features:
                 self.numeric_features += [f'butter_filter_trend_rsi_{i}', f'close_normed_butter_filter_trend_rsi_{i}']
+
+    def insert_trend_rolling_means(self, windows = [3, 6, 18]):
+        if 'butter_filter_trend' not in self.df.columns:
+            self.insert_butter_filter()
+        
+        for i in windows:
+            self.df[f'butter_filter_trend_ma_{i}'] = (self.df['butter_filter_trend']).ewm(span=i).mean()
+            self.df[f'close_normed_butter_filter_trend_ma_{i}'] = self.df['close'] / self.df[f'butter_filter_trend_ma_{i}']
+
+            if f'butter_filter_trend_ma_{i}' not in self.numeric_features:
+                self.numeric_features += [f'butter_filter_trend_ma_{i}', f'close_normed_butter_filter_trend_ma_{i}']
+    
+    def insert_trend_deviation(self):
+        if 'butter_filter_trend' not in self.df.columns:
+            self.insert_butter_filter()
+        
+        self.df['butter_filter_trend_deviation'] = (self.df['close'] - self.df['butter_filter_trend']) / self.df['butter_filter_trend']
+        self.df['close_normed_butter_filter_trend_deviation'] = self.df['close'] / self.df['butter_filter_trend_deviation']
+
+        if 'butter_filter_trend_deviation' not in self.numeric_features:
+            self.numeric_features += ['butter_filter_trend_deviation', 'close_normed_butter_filter_trend_deviation']
+
             
     def insert_all(self, common_windows= None):
         if common_windows is None:
