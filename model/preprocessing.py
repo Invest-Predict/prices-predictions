@@ -6,6 +6,7 @@ from multiprocessing import Pool
 from os import cpu_count
 from statsmodels.tsa.filters.hp_filter import hpfilter
 from functools import partial
+import pandas as pd
 
 # Фильтрация, разделение на тренд и цикл 
 
@@ -44,8 +45,8 @@ class Scaler(Enum):
     """
     Перечисление для выбора метода скейлинга данных.
     """
-    Standart = StandardScaler()
-    Power = PowerTransformer()
+    Standard = StandardScaler
+    Power = PowerTransformer
 
 def scale_num_data(data, numeric, scaler : Scaler):
     """
@@ -59,7 +60,7 @@ def scale_num_data(data, numeric, scaler : Scaler):
     Возвращает:
         pd.DataFrame: Данные с масштабированными числовыми признаками.
     """
-    scale_model = scaler.value
+    scale_model = scaler.value()
     transformed_data = data.copy()
     transformed_data[numeric] = scale_model.fit(transformed_data[numeric]).transform(transformed_data[numeric])
     return transformed_data
@@ -70,7 +71,7 @@ def train_valid_split(data,
                       year, month, day, 
                       numeric, cat, target, 
                       utc = []): # utc здесь добавлено для optuna 
-        # возвращает тестовую и валидационную выборки в завимости от заданного времени
+    # возвращает тестовую и валидационную выборки в завимости от заданного времени
     """
     Делит данные на обучающую и валидационную выборки в зависимости от указанной даты.
 
@@ -98,6 +99,27 @@ def train_valid_split(data,
     y_val = test_df[target]
 
     return X_train, X_val, y_train, y_val
+
+def train_valid_split_stupidly(data,  
+                               target, last_days = 2,
+                               utc = []): # utc здесь добавлено для optuna 
+        
+    # возвращает тестовую и валидационную выборки в завимости от заданного времени
+
+    split_date = data["utc"][-1] - pd.DateOffset(days=last_days)
+    
+    train_df = data[data["utc"] < split_date]
+
+    X_train = train_df.drop(columns=target)
+    y_train = train_df[target]
+
+    test_df = data[data["utc"] >= split_date]
+
+    X_val = test_df.drop(columns=target)
+    y_val = test_df[target]
+
+    return X_train, X_val, y_train, y_val
+
 
 def train_valid_test_split(data, 
                       test_start_data : dt.datetime, # с точностью до минут указываем начало тестового периода 

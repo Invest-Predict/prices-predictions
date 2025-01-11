@@ -5,20 +5,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 from arch.unitroot import PhillipsPerron
 from statsmodels.tsa.stattools import adfuller, zivot_andrews
+from datetime import date
+
+from features.standart_features import StandartFeaturesMixin
+from features.time_features import TimeFeaturesMixin
+from features.trend_features import TrendFeaturesMixin
+from features.uncommon_features import UncommonFeaturesMixin
 
 # Здесь все признаки и все по датафрейму
 
-# to do: визуализации свечей в visualize_time_frame 
-# Добавить все признаки, которые можно сюда добавить 
-
-
-class FinData():
+class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin):
     """
     Класс для обработки финансовых данных. 
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
     визуализировать и подготавливать таргет для моделей машинного обучения.
     """
-    def __init__(self, df_path = 'datasets/T_yandex_10min.csv'):
+    def __init__(self, df_path, column_names=None):
         """
         Инициализирует объект FinData, загружая данные из CSV-файла.
 
@@ -38,39 +40,35 @@ class FinData():
         self.df.drop_duplicates(inplace=True)
         self.target : str
 
+        self.cat_features = []
+        self.numeric_features = ['open', 'close', 'high', 'low', 'volume']
+        self.make_binary_class_target()
+
         
     def make_binary_class_target(self):
-        """
-        Добавляет два типа таргетов: бинарный и трехклассовый.
-
-        direction_binary: 0 или 1 в зависимости от изменения цены закрытия.
-        direction: 0, 1 или 2 для обозначения направления изменения цены (вниз, без изменений, вверх).
-        """
-        # добавляет два варианта таргета - 2 и 3 класса 
-        self.df = pl.from_pandas(self.df)
-        self.df = self.df.with_columns(
-            pl.when(pl.col('close').shift(-1) > pl.col('close')).then(2)
-            .when(pl.col('close').shift(-1) == pl.col('close')).then(1)
-            .otherwise(0)
-            .alias("direction"),
-            pl.when(pl.col('close').shift(-1) > pl.col('close')).then(1)
-            .otherwise(0)
-            .alias("direction_binary")
-        )
-        self.df = self.df.to_pandas()
-
-    def restrict_time_down(self, data : dt.datetime):
-        self.df = pl.from_pandas(self.df)
-        self.df = self.df.filter(pl.col("utc") >= data)
-        self.df = self.df.to_pandas()
-
-    def restrict_time_up(self, data : dt.datetime):
-        self.df = pl.from_pandas(self.df)
-        self.df = self.df.filter(pl.col("utc") <= data)
-        self.df = self.df.to_pandas()
+        self.df["direction_binary"] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
 
 
-    def set_tardet(self, target):
+    def restrict_time_down(self, date : dt.datetime):
+        self.df = self.df[self.df["utc"] >= date].reset_index().drop(columns=['index'])
+
+
+    def restrict_time_up(self, date : dt.datetime):
+        self.df = self.df[self.df["utc"] <= date].reset_index().drop(columns=['index'])
+
+    def restrict_time_up_stupidly(self, months=2, days=0):
+        # берёт первую дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
+
+        last_day = self.df['utc'][0] + pd.DateOffset(months=months, days=days)
+        self.restrict_time_up(date=last_day)
+
+    def restrict_time_down_stupidly(self, months=2, days=0):
+        # берёт последнюю дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
+
+        last_day = self.df['utc'].iloc[-1] - pd.DateOffset(months=months, days=days)
+        self.restrict_time_down(date=last_day)
+
+    def set_target(self, target):
         """
         Устанавливает таргет для анализа.
 
@@ -83,7 +81,8 @@ class FinData():
     def visualize_time_frame(self,
                              year_start, month_start, day_start, 
                              year_end, month_end, day_end, 
-                             column, type="line"):
+                             columns = ['candle'], candle_freq=None,
+                             cmap=None, line_kwargs=None):
         """
         Визуализирует данные за указанный временной интервал.
 
@@ -94,68 +93,77 @@ class FinData():
             year_end (int): Год конца.
             month_end (int): Месяц конца.
             day_end (int): День конца.
-            column (str): Название столбца для визуализации.
-            type (str): Тип графика (по умолчанию "line").
+            columns (list(str)): Список столбцов, которые нужно визуализировать; 'candle' визуализирует свечи целиком.
+            candle_freq (str): Частота свечей, которую передаем в pd.Grouper. None - не меняем интервал.
+            cmap (str | Colormap): Название или объект Colormap. 
+            line_kwargs (dict): Аргументы, которые передаются в plt.plot.
         """
+        if line_kwargs is None:
+            line_kwargs = {}
+
+        if cmap is not None:
+            cmap = plt.get_cmap(cmap)
+
         vis_data = pl.from_pandas(self.df)
         vis_data = vis_data.filter((pl.col("utc") <= pl.datetime(year_end, month_end, day_end)) 
                                    & (pl.col("utc") >= pl.datetime(year_start, month_start, day_start)))
         vis_data = vis_data.to_pandas()
         plt.figure(figsize=(12, 6))
-        plt.plot(vis_data['utc'], vis_data[column], label=f'Data {column}')
-    
-    # Добавление признаков 
-    def insert_stat_close_price(self):
-        self.df["stat_close_price"] = self.df["close"]/self.df["close"].shift()
+        for i, column in enumerate(columns):
+            if column == 'candle':
+                candle_vis_data = vis_data.set_index('utc')[['open', 'close', 'high', 'low']]
+                if candle_freq is not None:
+                    candle_vis_data = candle_vis_data.groupby(pd.Grouper(freq=candle_freq)).agg({'open': 'first', 'close': 'last', 'high': 'max', 'low': 'min'})
+                
+                up = candle_vis_data[candle_vis_data['close'] > candle_vis_data['open']].dropna()
+                down = candle_vis_data[candle_vis_data['close'] < candle_vis_data['open']].dropna()
 
-    def insert_shifts_norms(self, windows_shifts_norms):
-        """
-        Добавляет нормализованные значения цены с учетом сдвигов.
+                num_days = (date(year_end, month_end, day_end) - date(year_start, month_start, day_start)).days + 1
 
-        Параметры:
-            windows_shifts_norms (list): Список сдвигов для нормализации.
-        """
-        for i in windows_shifts_norms:
-            self.df[f'close_norms_{i}'] = self.df['close']/self.df['close'].shift(i)
-            self.df[f'close_high_norms_{i}'] = self.df['close']/self.df['close'].shift(i)
-            self.df[f'high_norms_{i}'] = self.df['high']/self.df['high'].shift(i)
-            self.df[f'low_norms_{i}'] = self.df['low']/self.df['low'].shift(i)
+                width_wide = num_days / (len(candle_vis_data) + 3)
+                width_narrow = width_wide / 5
+                edge_width = 40 / (len(candle_vis_data) + 3)
 
-    def insert_time_features(self):
-        # Добавляет минуты, дни, часы 
-        # Убрать может раз вообще незначимо
-        self.df['hours'] = self.df['utc'].dt.hour
-        self.df['day'] = self.df['utc'].dt.day_of_year
-        self.df['minute'] = (self.df['utc'].dt.minute + 60 * self.df['hours'])
+                col_up = 'green'
+                col_down = 'red'
+                edge_color = 'black'
 
-    def insert_rolling_means(self, windows_ma):
-        """
-        Добавляет скользящие средние для указанных окон.
+                plt.bar(up.index, up['high']-up['low'], width_narrow, bottom=up['low'], color=col_up, edgecolor=edge_color, linewidth=edge_width) 
+                plt.bar(up.index, up['close']-up['open'], width_wide, bottom=up['open'], color=col_up, edgecolor=edge_color, linewidth=edge_width)
 
-        Параметры:
-            windows_ma (list): Список размеров окон для скользящих средних.
-        """
-        # скользящие средние 
-        for i in windows_ma:
-            self.df[f'ma_{i}'] = self.df['close'].rolling(window = i, closed="left").mean()
-            self.df[f'close_normed_ma_{i}'] = self.df['close']/self.df[f'ma_{i}']
+                plt.bar(down.index, down['high']-down['low'], width_narrow, bottom=down['low'], color=col_down, edgecolor=edge_color, linewidth=edge_width) 
+                plt.bar(down.index, down['open']-down['close'], width_wide, bottom=down['close'], color=col_down, edgecolor=edge_color, linewidth=edge_width)
+
+            else:
+                if cmap is not None:
+                    line_kwargs['color'] = cmap(i / max(1, len(columns) - 1))
+                plt.plot(vis_data['utc'], vis_data[column], label=column, **line_kwargs)
+
+        plt.legend(facecolor='lightgrey', edgecolor='black', title='Columns')
+
             
-    def insert_exp_rolling_means(self, windows_ema):
-        """
-        Добавляет экспоненциальные скользящие средние для указанных окон.
-
-        Параметры:
-            windows_ema (list): Список размеров окон для EMA.
-        """
-        # экспоненциальные скользящие средние
-        for i in windows_ema:
-            self.df[f'ema_{i}'] = (self.df['close']).ewm(span=i).mean()
-            self.df[f'close_normed_ema_{i}'] = self.df['open']/self.df[f'ema_{i}']
+    def insert_all(self, common_windows= None):
+        if common_windows is None:
+            common_windows = [3, 6, 18]
+        self.insert_shifts_norms(common_windows)
+        self.insert_time_features()
+        self.insert_holidays()
+        self.insert_seasons()
+        self.insert_rolling_means(common_windows)
+        self.insert_exp_rolling_means(common_windows)
+        self.insert_rsi(common_windows)
+        self.insert_bollinger()
+        self.insert_high_low_diff(common_windows)
+        self.insert_stochastic_oscillator(common_windows)
+        self.insert_random_prediction()
+        self.insert_butter_filter()
+        self.insert_trend_rsi()
+        self.insert_trend_rolling_means()
+        self.insert_trend_deviation()
 
     def get_columns(self):
         return self.df.columns
-
-
+    
     def check_stationarity(self, columns):
             """
             Проверяет стационарность столбцов с использованием тестов Phillips-Perron (PP),
@@ -170,26 +178,29 @@ class FinData():
             for column in columns:
                 if column in self.df.columns:
                     series = self.df[column].dropna()
+                    try:
+                        # результаты тестов
+                        pp_result = PhillipsPerron(series)
+                        adf_result = adfuller(series, autolag='AIC')
+                        
+                        # za_result = zivot_andrews(series, trim=0.15)
 
-                    # результаты тестов
-                    pp_result = PhillipsPerron(series)
-                    adf_result = adfuller(series, autolag='AIC')
-                    za_result = zivot_andrews(series, trim=0.15)
+                        # проверка p-value для каждого теста
+                        non_stationary_tests = []
+                        if pp_result.pvalue > 0.05:
+                            non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
+                        if adf_result[1] > 0.05:
+                            non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
+                        # if za_result and za_result[1] > 0.05:
+                        #     non_stationary_tests.append(f"Zivot-Andrews (p-value: {za_result[1]:.5f})")
 
-                    # проверка p-value для каждого теста
-                    non_stationary_tests = []
-                    if pp_result.pvalue > 0.05:
-                        non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
-                    if adf_result[1] > 0.05:
-                        non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
-                    if za_result and za_result[1] > 0.05:
-                        non_stationary_tests.append(f"Zivot-Andrews (p-value: {za_result[1]:.5f})")
-
-                    if non_stationary_tests:
-                        print(f"Столбец: {column}")
-                        print("  Нестационарность обнаружена в следующих тестах:")
-                        for test in non_stationary_tests:
-                            print(f"    - {test}")
+                        if non_stationary_tests:
+                            print(f"Столбец: {column}")
+                            print("  Нестационарность обнаружена в следующих тестах:")
+                            for test in non_stationary_tests:
+                                print(f"    - {test}")
+                    except Exception as e:
+                        print(f"Ошибка при обработке столбца '{column}': {e}")
                 else:
                     print(f"Столбец '{column}' не найден в DataFrame.")
 

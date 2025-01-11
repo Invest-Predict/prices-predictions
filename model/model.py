@@ -5,9 +5,13 @@ import numpy as np
 import shap
 import optuna 
 import datetime as dt
+from dateutil.relativedelta import relativedelta
 from optuna.pruners import MedianPruner
 from optuna.storages import RDBStorage
 from optuna.integration import CatBoostPruningCallback
+from data import FinData
+# from preprocessing import train_valid_split_stupidly
+from sklearn.metrics import accuracy_score
 
 # визуализация предсказаний модели и матрицы 
 # подбирать время для предсказаний - optuna chose time
@@ -17,13 +21,65 @@ from optuna.integration import CatBoostPruningCallback
 # куча признаков и выбираются самые важные 
 
 # чуть-чуть Лера переделает 
-def restrict_time_down(df, year, month, day):
+def restrict_time_down(df, year=2024, month=9, day=11, date=None):
         # обрезает датасет по времени ОТ
         df_copy = df.copy()
+        if date is not None:
+            df_copy = df_copy[df_copy["utc"] >= date].reset_index().drop(columns=['index'])
+            return df_copy
         df_copy = pl.from_pandas(df_copy.reset_index()).rename({"index" : "old_indexes"})
         df_copy = df_copy.filter(pl.col("utc") >= pl.datetime(year, month, day))
         df_copy = df_copy.to_pandas()
         return df_copy.drop(columns=["old_indexes", "utc"]), df_copy.old_indexes 
+
+def restrict_time_up(df, year=2024, month=9, day=11, date = None):
+    # обрезает датасет по времени ДО
+    df_copy = df.copy()
+
+    if date is not None:
+        df_copy = df_copy[df_copy["utc"] <= date].reset_index().drop(columns=['index'])
+        return df_copy
+
+    df_copy = pl.from_pandas(df_copy.reset_index()).rename({"index" : "old_indexes"})
+    df_copy = df_copy.filter(pl.col("utc") >= pl.datetime(year, month, day))
+    df_copy = df_copy.to_pandas()
+    return df_copy.drop(columns=["old_indexes", "utc"]), df_copy.old_indexes
+
+def restrict_time_up_stupidly(df, months=2, days=0):
+    # берёт первую дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
+
+    last_day = df['utc'][0] + pd.DateOffset(months=months, days=days)
+    return restrict_time_up(df, date=last_day)
+
+def get_constant_accuracy(y_val):
+        # возвращает точность контантного предсказания на валидационной выборке
+        val_const = pl.from_pandas(y_val.reset_index())
+        consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
+        zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
+        ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
+
+        return zeroes/(ones + zeroes)
+ 
+def train_valid_split_stupidly(data,  
+                               target, last_days = 2,
+                               utc = []): # utc здесь добавлено для optuna 
+        
+    # возвращает тестовую и валидационную выборки в завимости от заданного времени
+
+    split_date = data["utc"].iloc[-1] - pd.DateOffset(days=last_days)
+    
+    train_df = data[data["utc"] < split_date]
+
+    X_train = train_df.drop(columns=target)
+    y_train = train_df[target]
+
+    test_df = data[data["utc"] >= split_date]
+
+    X_val = test_df.drop(columns=target)
+    y_val = test_df[target]
+
+    return X_train, X_val, y_train, y_val
+
 
 class CatboostFinModel():
     """
@@ -42,7 +98,7 @@ class CatboostFinModel():
         self.args = args
         # запоминает наилучший результат на валидационной выборке 
         self.best_accuracy = 0
-        self.features_best_acuuracy = []
+        self.features_best_accuracy = []
         self.X_train : pd.DataFrame
         self.X_val : pd.DataFrame
         self.y_train : pd.DataFrame
@@ -76,7 +132,6 @@ class CatboostFinModel():
         self.cat, self.numeric = cat_features, numeric_features
     
 
-
     def fit(self):
         """
         Обучает модель CatBoostClassifier на обучающей выборке с использованием валидационной выборки.
@@ -84,6 +139,7 @@ class CatboostFinModel():
         self.model.fit(self.X_train, self.y_train, eval_set=Pool(self.X_val, self.y_val, cat_features = self.cat), cat_features = self.cat)
         # self.print_feature_importances()
         # self.visualise_shap_values()
+        return self
 
     def predict(self, X_test):
         """
@@ -133,7 +189,7 @@ class CatboostFinModel():
         zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
         ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
 
-        print(f"Точность константного предсказания {zeroes/(ones + zeroes)}")
+        print(f"Точность константного предсказания {max(zeroes, ones)/(ones + zeroes)}")
 
     def print_feature_importances(self):
         """
@@ -219,23 +275,42 @@ class CatboostFinModel():
         study = optuna.create_study(direction="maximize", pruner=pruner, storage=storage, load_if_exists=True)
         study.optimize(objective, n_trials=interval_num)
 
-        best_params = study.best_params
-        print(f"Лучшее количество дней: {best_params['days_from_date']}")
-        print(f"Лучший результат: {study.best_value}")
+def cross_validation(self, df, cat, n_samples = 3):
+        '''
+        данная функция рандомно берёт два месяца начиная с 2024.01.01 и на них обучает, потом тестит на последующих двух дня
+        если точность константного предсказания лежит в (0.49, 0.52), то добавляем полученную accuracy к итоговому списку
+        в конце считаем среднее ариф.  из списка
+        '''
 
-        return best_params
+        #подумать, как учитывать тот факт, что тестовые выборки не всегда одного размера (пока что надо как-то в среднем арифметическом веса учитывать)
         
+        trials_sum, trials_cnt = 0, 0
+        # np.random.seed(100)
 
+        while n_samples > 0:
+            month = np.random.randint(9)
+            day = np.random.randint(31)
 
+            first_date = dt.datetime(2024, 1, 1) + relativedelta(months=month, days=day)
+            df = restrict_time_down(df, date=first_date)
+            df = restrict_time_up_stupidly(df)
 
+            X_train, X_val, y_train, y_val = train_valid_split_stupidly(df, target = "direction_binary", last_days=2)
+            print(y_val.shape)
+            new_model = self.model
+            new_model.fit(X_train, y_train, eval_set=Pool(X_val, y_val, cat_features = cat), cat_features = cat, verbose=False)
 
-
-
-
-
-    
+            const_acc = get_constant_accuracy(y_val)
+            print('const_acc:', const_acc)
+            
+            # if const_acc > 0.52 or const_acc < 0.49:
+            #     continue
+            
+            n_samples -= 1
+            y_pred = new_model.predict(X_val)
+            acc = accuracy_score(y_pred, y_val)
+            trials_sum += acc
+            trials_cnt += 1
+            print(f"On trial {n_samples} with date {first_date} got accuracy {acc}")
         
-
-
-        
-    
+        return trials_sum / trials_cnt

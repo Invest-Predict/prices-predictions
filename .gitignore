@@ -134,6 +134,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+prices-predictions-venv/
 myenv/
 env/
 venv/
