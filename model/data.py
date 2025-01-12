@@ -156,10 +156,10 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         self.insert_high_low_diff(common_windows)
         self.insert_stochastic_oscillator(common_windows)
         self.insert_random_prediction()
-        self.insert_butter_filter()
-        self.insert_trend_rsi()
-        self.insert_trend_rolling_means()
-        self.insert_trend_deviation()
+        # self.insert_butter_filter()
+        # self.insert_trend_rsi()
+        # self.insert_trend_rolling_means()
+        # self.insert_trend_deviation()
 
     def get_columns(self):
         return self.df.columns
