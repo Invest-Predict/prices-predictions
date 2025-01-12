@@ -7,10 +7,10 @@ from arch.unitroot import PhillipsPerron
 from statsmodels.tsa.stattools import adfuller, zivot_andrews
 from datetime import date
 
-from features.standart_features import StandartFeaturesMixin
-from features.time_features import TimeFeaturesMixin
-from features.trend_features import TrendFeaturesMixin
-from features.uncommon_features import UncommonFeaturesMixin
+from .features import StandartFeaturesMixin
+from .features import TimeFeaturesMixin
+from .features import TrendFeaturesMixin
+from .features import UncommonFeaturesMixin
 
 # Здесь все признаки и все по датафрейму
 
@@ -29,12 +29,8 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         """
         self.df = pd.read_csv(df_path)
 
-        self.df = self.df.rename(columns={'Yandex open' : 'open', 
-                                          'Yandex close' : 'close', 
-                                          'Yandex high' : 'high', 
-                                          'Yandex low' : 'low', 
-                                          'Yandex volume' : 'volume'}, 
-                                 errors='ignore')
+        if column_names is not None:
+            self.df = self.df.rename(columns=column_names, errors='ignore')
         
         self.df.utc = pd.to_datetime(self.df.utc).dt.tz_localize(None)
         self.df.drop_duplicates(inplace=True)

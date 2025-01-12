@@ -9,7 +9,7 @@ from dateutil.relativedelta import relativedelta
 from optuna.pruners import MedianPruner
 from optuna.storages import RDBStorage
 from optuna.integration import CatBoostPruningCallback
-from data import FinData
+from .data import FinData
 # from preprocessing import train_valid_split_stupidly
 from sklearn.metrics import accuracy_score
 
