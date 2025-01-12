@@ -9,7 +9,7 @@ from dateutil.relativedelta import relativedelta
 from optuna.pruners import MedianPruner
 from optuna.storages import RDBStorage
 from optuna.integration import CatBoostPruningCallback
-from data import FinData
+from .data import FinData
 # from preprocessing import train_valid_split_stupidly
 from sklearn.metrics import accuracy_score
 
@@ -219,7 +219,6 @@ class CatboostFinModel():
         shap_values = self.get_shap_values()
         shap.summary_plot(shap_values, self.X_train)
 
-
     def optuna_choose_time(self, valid_date : dt.datetime, days_num = 15, interval_num = 10, metric = "Accuracy"):
         """
         Выполняет оптимизацию времени валидации с использованием Optuna.
@@ -275,7 +274,7 @@ class CatboostFinModel():
         study = optuna.create_study(direction="maximize", pruner=pruner, storage=storage, load_if_exists=True)
         study.optimize(objective, n_trials=interval_num)
 
-def cross_validation(self, df, cat, n_samples = 3):
+    def cross_validation(self, df, cat, n_samples = 3):
         '''
         данная функция рандомно берёт два месяца начиная с 2024.01.01 и на них обучает, потом тестит на последующих двух дня
         если точность константного предсказания лежит в (0.49, 0.52), то добавляем полученную accuracy к итоговому списку
@@ -285,27 +284,40 @@ def cross_validation(self, df, cat, n_samples = 3):
         #подумать, как учитывать тот факт, что тестовые выборки не всегда одного размера (пока что надо как-то в среднем арифметическом веса учитывать)
         
         trials_sum, trials_cnt = 0, 0
-        # np.random.seed(100)
+        trial_on_const_accuracy = 3
 
         while n_samples > 0:
-            month = np.random.randint(9)
+            # np.random.seed(100)
+            month = np.random.randint(low=7, high=9)
             day = np.random.randint(31)
 
             first_date = dt.datetime(2024, 1, 1) + relativedelta(months=month, days=day)
-            df = restrict_time_down(df, date=first_date)
-            df = restrict_time_up_stupidly(df)
+            df_restricted = restrict_time_down(df, date=first_date)
+            df_restricted = restrict_time_up_stupidly(df_restricted)
 
-            X_train, X_val, y_train, y_val = train_valid_split_stupidly(df, target = "direction_binary", last_days=2)
+            print('fist_date:', df_restricted['utc'].iloc[0], '- last_date:', df_restricted['utc'].iloc[-1])
+
+
+            X_train, X_val, y_train, y_val = train_valid_split_stupidly(df_restricted, target = "direction_binary", last_days=2)
+            const_acc = get_constant_accuracy(y_val)
+            print('const_acc:', const_acc)
+            
+            if trial_on_const_accuracy > 0 and (const_acc > 0.52 or const_acc < 0.49):
+                trial_on_const_accuracy -= 1
+                continue
+
             print(y_val.shape)
             new_model = self.model
             new_model.fit(X_train, y_train, eval_set=Pool(X_val, y_val, cat_features = cat), cat_features = cat, verbose=False)
 
-            const_acc = get_constant_accuracy(y_val)
-            print('const_acc:', const_acc)
+            # const_acc = get_constant_accuracy(y_val)
+            # print('const_acc:', const_acc)
             
-            # if const_acc > 0.52 or const_acc < 0.49:
+            # if trial_on_const_accuracy > 0 and const_acc > 0.52 or const_acc < 0.49:
+            #     trial_on_const_accuracy -= 1
             #     continue
-            
+
+            trial_on_const_accuracy = 3
             n_samples -= 1
             y_pred = new_model.predict(X_val)
             acc = accuracy_score(y_pred, y_val)
