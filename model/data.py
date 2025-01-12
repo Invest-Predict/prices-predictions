@@ -75,48 +75,52 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         self.target = target
     
     def visualize_time_frame(self,
-                             year_start, month_start, day_start, 
-                             year_end, month_end, day_end, 
+                             datetime_start, 
+                             datetime_end, 
                              columns = ['candle'], candle_freq=None,
+                             predictor=None,
                              cmap=None, line_kwargs=None):
         """
         Визуализирует данные за указанный временной интервал.
 
         Параметры:
-            year_start (int): Год начала.
-            month_start (int): Месяц начала.
-            day_start (int): День начала.
-            year_end (int): Год конца.
-            month_end (int): Месяц конца.
-            day_end (int): День конца.
+            datetime_start (datetime): Datetime начала.
+            datetime_end (datetime): Datetime конца.
             columns (list(str)): Список столбцов, которые нужно визуализировать; 'candle' визуализирует свечи целиком.
             candle_freq (str): Частота свечей, которую передаем в pd.Grouper. None - не меняем интервал.
+            predictor (Callable): Функция или вызываемый объект, предсказания которого визуализируются.
             cmap (str | Colormap): Название или объект Colormap. 
             line_kwargs (dict): Аргументы, которые передаются в plt.plot.
         """
+
+        if predictor is not None:
+            if 'candle' not in columns:
+                raise ValueError('Must draw candles in order to draw predictions.')
+            if candle_freq is not None:
+                raise ValueError("Frequencies of predictions and candles don't align.")
+
         if line_kwargs is None:
             line_kwargs = {}
 
         if cmap is not None:
             cmap = plt.get_cmap(cmap)
 
-        vis_data = pl.from_pandas(self.df)
-        vis_data = vis_data.filter((pl.col("utc") <= pl.datetime(year_end, month_end, day_end)) 
-                                   & (pl.col("utc") >= pl.datetime(year_start, month_start, day_start)))
-        vis_data = vis_data.to_pandas()
+        vis_data = self.df
+        vis_data = vis_data[(vis_data['utc'] <= datetime_end) & (vis_data['utc'] >= datetime_start)]
+
         plt.figure(figsize=(12, 6))
+        legend = False
         for i, column in enumerate(columns):
             if column == 'candle':
                 candle_vis_data = vis_data.set_index('utc')[['open', 'close', 'high', 'low']]
+
                 if candle_freq is not None:
                     candle_vis_data = candle_vis_data.groupby(pd.Grouper(freq=candle_freq)).agg({'open': 'first', 'close': 'last', 'high': 'max', 'low': 'min'})
                 
                 up = candle_vis_data[candle_vis_data['close'] > candle_vis_data['open']].dropna()
                 down = candle_vis_data[candle_vis_data['close'] < candle_vis_data['open']].dropna()
 
-                num_days = (date(year_end, month_end, day_end) - date(year_start, month_start, day_start)).days + 1
-
-                width_wide = num_days / (len(candle_vis_data) + 3)
+                width_wide = (min(pd.Series(candle_vis_data.index).shift(-1) - candle_vis_data.index)).total_seconds() / 86400 # типо % дня
                 width_narrow = width_wide / 5
                 edge_width = 40 / (len(candle_vis_data) + 3)
 
@@ -130,15 +134,31 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
                 plt.bar(down.index, down['high']-down['low'], width_narrow, bottom=down['low'], color=col_down, edgecolor=edge_color, linewidth=edge_width) 
                 plt.bar(down.index, down['open']-down['close'], width_wide, bottom=down['close'], color=col_down, edgecolor=edge_color, linewidth=edge_width)
 
+                if predictor is not None:
+                    pred = predictor(vis_data)
+
+                    # сопоставим каждой свече предсказание для неё и достанем отдельно положительные и отрицательные
+                    candles_pos = candle_vis_data[1:][pred[:-1] == 1]
+                    candles_neg = candle_vis_data[1:][pred[:-1] == 0]
+
+                    marker_size = edge_width * 80
+
+                    shift = (max(candle_vis_data['high']) - min(candle_vis_data['low'])) / 15
+
+                    plt.scatter(x=candles_pos.index, y=candles_pos['high'] + shift, marker='^', color=col_up, s=marker_size, edgecolors=edge_color, linewidths=edge_width)
+                    plt.scatter(x=candles_neg.index, y=candles_neg['low'] - shift, marker='v', color=col_down, s=marker_size, edgecolors=edge_color, linewidths=edge_width)
+
             else:
+                legend = True
                 if cmap is not None:
                     line_kwargs['color'] = cmap(i / max(1, len(columns) - 1))
                 plt.plot(vis_data['utc'], vis_data[column], label=column, **line_kwargs)
 
-        plt.legend(facecolor='lightgrey', edgecolor='black', title='Columns')
+        if legend:
+            plt.legend(facecolor='lightgrey', edgecolor='black', title='Columns')
 
             
-    def insert_all(self, common_windows= None):
+    def insert_all(self, common_windows=None):
         if common_windows is None:
             common_windows = [3, 6, 18]
         self.insert_shifts_norms(common_windows)

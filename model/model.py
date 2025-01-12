@@ -153,6 +153,9 @@ class CatboostFinModel():
         """
         return self.model.predict(X_test)
     
+    def __call__(self, X_test):
+        return self.predict(X_test)
+    
     def score(self, X_test, y_test):
         """
         Вычисляет точность (Accuracy) модели на тестовых данных.
