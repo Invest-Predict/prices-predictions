@@ -138,19 +138,24 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         plt.legend(facecolor='lightgrey', edgecolor='black', title='Columns')
 
             
-    def insert_all(self, common_windows= None):
-        if common_windows is None:
-            common_windows = [3, 6, 18]
-        self.insert_shifts_norms(common_windows)
+    def insert_all(self, windows_shifts_norms=None, 
+                         windows_ma=None, 
+                         windows_ema=None,
+                         windows_rsi=None, 
+                         windows_high_low_diff=None, 
+                         windows_stoch_osc=None, 
+                         common_windows=[3, 6, 18]):
+        
+        self.insert_shifts_norms(common_windows if windows_shifts_norms==None else windows_shifts_norms)
         self.insert_time_features()
         self.insert_holidays()
         self.insert_seasons()
-        self.insert_rolling_means(common_windows)
-        self.insert_exp_rolling_means(common_windows)
-        self.insert_rsi(common_windows)
+        self.insert_rolling_means(common_windows if windows_ma==None else windows_ma)
+        self.insert_exp_rolling_means(common_windows if windows_ema==None else windows_ema)
+        self.insert_rsi(common_windows if windows_rsi==None else windows_rsi)
         self.insert_bollinger()
-        self.insert_high_low_diff(common_windows)
-        self.insert_stochastic_oscillator(common_windows)
+        self.insert_high_low_diff(common_windows if windows_high_low_diff==None else windows_high_low_diff)
+        self.insert_stochastic_oscillator(common_windows if windows_stoch_osc==None else windows_stoch_osc)
         self.insert_random_prediction()
         # self.insert_butter_filter()
         # self.insert_trend_rsi()
