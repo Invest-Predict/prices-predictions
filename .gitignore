@@ -8,6 +8,7 @@ __pycache__/
 
 # catboost and so on
 model/catboost_info/
+examples/catboost_info/
 model/optuna_trials.db
 
 # Distribution / packaging

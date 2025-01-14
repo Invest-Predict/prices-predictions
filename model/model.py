@@ -136,6 +136,10 @@ class CatboostFinModel():
         """
         Обучает модель CatBoostClassifier на обучающей выборке с использованием валидационной выборки.
         """
+        # чтобы не нужно было постоянно заново разделять выборку перед fit, достаточно просто установить numeric и сat в модели 
+        # и передать можно со всеми признаками X_val и X_train
+        self.X_val = self.X_val[self.numeric + self.cat]
+        self.X_train = self.X_train[self.numeric + self.cat]
         self.model.fit(self.X_train, self.y_train, eval_set=Pool(self.X_val, self.y_val, cat_features = self.cat), cat_features = self.cat)
         # self.print_feature_importances()
         # self.visualise_shap_values()
@@ -276,6 +280,10 @@ class CatboostFinModel():
     
         study = optuna.create_study(direction="maximize", pruner=pruner, storage=storage, load_if_exists=True)
         study.optimize(objective, n_trials=interval_num)
+
+    def optuna_choose_params(self, params : dict):
+        # полная валидация на параметры 
+        pass
 
     def cross_validation(self, df, cat, n_samples = 3):
         '''
