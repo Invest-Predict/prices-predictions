@@ -2,3 +2,4 @@ from .standart_features import StandartFeaturesMixin
 from .time_features import TimeFeaturesMixin
 from .trend_features import TrendFeaturesMixin
 from .uncommon_features import UncommonFeaturesMixin
+from .smoothing_features import SmoothingFeaturesMixin
