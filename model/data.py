@@ -73,6 +73,12 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         """
         # если понадобиться, а так я обычно не пользуюсь
         self.target = target
+
+    # Функция для увеличения интервала свечей
+    def merge_candles(self, freq):
+        # Берем первое значение колонок, помеченных как open, последнее для high, максимальное для high и минимальное для low
+        self.df = self.df.set_index('utc').groupby(pd.Grouper(freq=freq)).agg({'open': 'first', 'close': 'last', 'high': 'max', 'low': 'min'}).dropna().reset_index()
+
     
     def visualize_time_frame(self,
                              datetime_start, 
@@ -87,7 +93,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
             datetime_start (datetime): Datetime начала.
             datetime_end (datetime): Datetime конца.
             columns (list(str)): Список столбцов, которые нужно визуализировать; 'candle' визуализирует свечи целиком.
-            candle_freq (str): Частота свечей, которую передаем в pd.Grouper. None - не меняем интервал.
+            candle_freq (str): Частота свечей для отрисовки, которую передаем в pd.Grouper. None - не меняем интервал.
             predictor (Callable): Функция или вызываемый объект, предсказания которого визуализируются.
             cmap (str | Colormap): Название или объект Colormap. 
             line_kwargs (dict): Аргументы, которые передаются в plt.plot.
