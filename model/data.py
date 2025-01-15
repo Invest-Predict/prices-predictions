@@ -7,14 +7,11 @@ from arch.unitroot import PhillipsPerron
 from statsmodels.tsa.stattools import adfuller, zivot_andrews
 from datetime import date
 
-from .features import StandartFeaturesMixin
-from .features import TimeFeaturesMixin
-from .features import TrendFeaturesMixin
-from .features import UncommonFeaturesMixin
+from .features import StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin, SmoothingFeaturesMixin
 
 # Здесь все признаки и все по датафрейму
 
-class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin):
+class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin, SmoothingFeaturesMixin):
     """
     Класс для обработки финансовых данных. 
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
