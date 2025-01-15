@@ -34,15 +34,17 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         
         self.df.utc = pd.to_datetime(self.df.utc).dt.tz_localize(None)
         self.df.drop_duplicates(inplace=True)
-        self.target : str
+        self.target : list
 
         self.cat_features = []
         self.numeric_features = ['open', 'close', 'high', 'low', 'volume']
-        self.make_binary_class_target()
+        self.make_binary_class_target(target_name="direction_binary")
 
         
-    def make_binary_class_target(self):
-        self.df["direction_binary"] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
+    def make_binary_class_target(self, target_name):
+        self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
+        self.target = [target_name]
+
 
 
     def restrict_time_down(self, date : dt.datetime):
@@ -64,22 +66,11 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         last_day = self.df['utc'].iloc[-1] - pd.DateOffset(months=months, days=days)
         self.restrict_time_down(date=last_day)
 
-    def set_target(self, target):
-        """
-        Устанавливает таргет для анализа.
-
-        Параметры:
-            target (str): Название столбца с таргетом.
-        """
-        # если понадобиться, а так я обычно не пользуюсь
-        self.target = target
-
     # Функция для увеличения интервала свечей
     def merge_candles(self, freq):
         # Берем первое значение колонок, помеченных как open, последнее для high, максимальное для high и минимальное для low
         self.df = self.df.set_index('utc').groupby(pd.Grouper(freq=freq)).agg({'open': 'first', 'close': 'last', 'high': 'max', 'low': 'min'}).dropna().reset_index()
 
-    
     def visualize_time_frame(self,
                              datetime_start, 
                              datetime_end, 
@@ -230,6 +221,30 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
                         print(f"Ошибка при обработке столбца '{column}': {e}")
                 else:
                     print(f"Столбец '{column}' не найден в DataFrame.")
+
+    def print_correlations(self, columns: list, column_with=None):
+        """
+        Выводит корреляции Пирсона указанных столбцов DataFrame с заданной колонкой.
+        Если колонка не указана, используется таргет по умолчанию.
+
+        Параметры:
+            columns (list): Список названий столбцов, для которых вычисляются корреляции.
+            column_with (str, optional): Название колонки, с которой вычисляются корреляции. 
+                                         Если не указано, используется self.target.
+
+        Выводит:
+            Корреляции в порядке возрастания.
+        """
+        if column_with is None:
+            column_with = self.target[0]
+
+        if column_with not in self.df.columns:
+            print(self.df.columns)
+            raise ValueError(f"Колонка '{column_with}' не найдена в DataFrame.")
+
+        correlations = self.df[columns + [column_with]].corr()[column_with].drop(index=column_with).sort_values()
+        print("Корреляции столбцов с колонкой '{}':".format(column_with))
+        print(correlations)
 
     
 
