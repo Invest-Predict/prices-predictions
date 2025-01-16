@@ -34,15 +34,22 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         self.target : list
 
         self.cat_features = []
-        self.numeric_features = ['open', 'close', 'high', 'low', 'volume']
+        self.numeric_features = ['volume'] # я бы остальное по умолчанию не стала добавлять, потому что оно не нормировано 
         self.make_binary_class_target(target_name="direction_binary")
 
-        
     def make_binary_class_target(self, target_name):
         self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
         self.target = [target_name]
 
+    def get_numeric_features(self):
+        return self.numeric_features
+    
+    def get_cat_features(self):
+        return self.cat_features
 
+    def restrict_time_by_candles(self, date: dt.datetime, number_before, num_after):
+        # режем по количеству свечей 
+        pass
 
     def restrict_time_down(self, date : dt.datetime):
         self.df = self.df[self.df["utc"] >= date].reset_index().drop(columns=['index'])
@@ -170,7 +177,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         self.insert_bollinger()
         self.insert_high_low_diff(common_windows if windows_high_low_diff==None else windows_high_low_diff)
         self.insert_stochastic_oscillator(common_windows if windows_stoch_osc==None else windows_stoch_osc)
-        self.insert_random_prediction()
+        self.insert_random_prediction() # мамочки 
         # self.insert_butter_filter()
         # self.insert_trend_rsi()
         # self.insert_trend_rolling_means()

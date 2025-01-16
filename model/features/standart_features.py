@@ -22,40 +22,40 @@ class StandartFeaturesMixin:
             if f'close_norms_{i}' not in self.numeric_features:
                 self.numeric_features += [f'close_norms_{i}', f'close_high_norms_{i}', f'high_norms_{i}', f'low_norms_{i}']
     
-    def insert_rolling_means(self, windows_ma = [3, 6, 18]):
-        """
-        Добавляет скользящие средние для указанных окон.
+    # def insert_rolling_means(self, windows_ma = [3, 6, 18]):
+    #     """
+    #     Добавляет скользящие средние для указанных окон.
 
-        Параметры:
-            windows_ma (list): Список размеров окон для скользящих средних.
-        """
-        # скользящие средние 
-        for i in windows_ma:
-            self.df[f'ma_{i}'] = self.df['close'].rolling(window = i, closed="left").mean()
-            column_name = f'ma_{i}'
-            for idx in range(i):
-                if pd.isna(self.df.at[idx, column_name]):
-                    self.df.at[idx, column_name] = self.df['close'][:idx + 1].mean()
+    #     Параметры:
+    #         windows_ma (list): Список размеров окон для скользящих средних.
+    #     """
+    #     # скользящие средние 
+    #     for i in windows_ma:
+    #         self.df[f'ma_{i}'] = self.df['close'].rolling(window = i, closed="left").mean()
+    #         column_name = f'ma_{i}'
+    #         for idx in range(i):
+    #             if pd.isna(self.df.at[idx, column_name]):
+    #                 self.df.at[idx, column_name] = self.df['close'][:idx + 1].mean()
                     
-            self.df[f'close_normed_ma_{i}'] = self.df['close']/self.df[f'ma_{i}']
+    #         self.df[f'close_normed_ma_{i}'] = self.df['close']/self.df[f'ma_{i}']
 
-            if f'ma_{i}' not in self.numeric_features:
-                self.numeric_features += [f'ma_{i}', f'close_normed_ma_{i}']
+    #         if f'ma_{i}' not in self.numeric_features:
+    #             self.numeric_features += [f'ma_{i}', f'close_normed_ma_{i}']
     
-    def insert_exp_rolling_means(self, windows_ema = [3, 6, 18]):
-        """
-        Добавляет экспоненциальные скользящие средние для указанных окон.
+    # def insert_exp_rolling_means(self, windows_ema = [3, 6, 18]):
+    #     """
+    #     Добавляет экспоненциальные скользящие средние для указанных окон.
 
-        Параметры:
-            windows_ema (list): Список размеров окон для EMA.
-        """
-        # экспоненциальные скользящие средние
-        for i in windows_ema:
-            self.df[f'ema_{i}'] = (self.df['close']).ewm(span=i).mean()
-            self.df[f'close_normed_ema_{i}'] = self.df['close']/self.df[f'ema_{i}']
+    #     Параметры:
+    #         windows_ema (list): Список размеров окон для EMA.
+    #     """
+    #     # экспоненциальные скользящие средние
+    #     for i in windows_ema:
+    #         self.df[f'ema_{i}'] = (self.df['close']).ewm(span=i).mean()
+    #         self.df[f'close_normed_ema_{i}'] = self.df['close']/self.df[f'ema_{i}']
 
-            if f'ema_{i}' not in self.numeric_features:
-                self.numeric_features += [f'ema_{i}', f'close_normed_ema_{i}']
+    #         if f'ema_{i}' not in self.numeric_features:
+    #             self.numeric_features += [f'ema_{i}', f'close_normed_ema_{i}']
     
     def insert_rsi(self, windows_rsi = [3, 6, 18]):
         for i in windows_rsi:

@@ -28,8 +28,7 @@ class SmoothingFeaturesMixin:
             self.df[f'high_normed_ma_{i}'] = self.df['high']/self.df[f'ma_{i}']
 
             if f'ma_{i}' not in self.numeric_features:
-                self.numeric_features += [f'ma_{i}', 
-                                          f'close_normed_ma_{i}'
+                self.numeric_features += [f'close_normed_ma_{i}',
                                           f'low_normed_ma_{i}', 
                                           f'high_normed_ma_{i}']
     
@@ -46,7 +45,7 @@ class SmoothingFeaturesMixin:
             self.df[f'close_normed_ema_{i}'] = self.df['close']/self.df[f'ema_{i}']
 
             if f'ema_{i}' not in self.numeric_features:
-                self.numeric_features += [f'ema_{i}', f'close_normed_ema_{i}']
+                self.numeric_features += [f'close_normed_ema_{i}']
 
     def insert_weighted_rolling_means(self, windows_wma = [3, 6, 18]):
         """
@@ -62,7 +61,7 @@ class SmoothingFeaturesMixin:
             self.df[f'close_normed_wma_{i}'] = self.df['close'] / self.df[f'wma_{i}']
 
             if f'wma_{i}' not in self.numeric_features:
-                self.numeric_features += [f'wma_{i}', f'close_normed_wma_{i}']
+                self.numeric_features += [f'close_normed_wma_{i}']
 
     
     def insert_hull_moving_average(self, windows_hma = [3, 6, 18]):
@@ -84,7 +83,7 @@ class SmoothingFeaturesMixin:
             self.df[f'close_normed_hma_{i}'] = self.df['close'] / self.df[f'hma_{i}']
 
             if f'hma_{i}' not in self.numeric_features:
-                self.numeric_features += [f'hma_{i}', f'close_normed_hma_{i}']
+                self.numeric_features += [f'close_normed_hma_{i}']
 
     # def insert_adaptive_moving_average(self, windows_ama):
     #     """
