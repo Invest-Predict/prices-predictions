@@ -6,6 +6,7 @@ class StandartFeaturesMixin:
         self.df: pd.DataFrame() = None
         self.cat_features: list = []
         self.numeric_features: list = []
+        
 
     def insert_shifts_norms(self, windows_shifts_norms = [3, 6, 18]):
         """
@@ -30,6 +31,7 @@ class StandartFeaturesMixin:
 
             if f'rsi_{i}' not in self.numeric_features:
                 self.numeric_features += [f'rsi_{i}', f'close_normed_rsi_{i}']
+
     
     def insert_high_low_diff(self, windows_hl = [3, 6, 18]):
         for i in windows_hl:

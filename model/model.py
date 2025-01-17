@@ -9,18 +9,16 @@ from dateutil.relativedelta import relativedelta
 from optuna.pruners import MedianPruner
 from optuna.storages import RDBStorage
 from optuna.integration import CatBoostPruningCallback
-from .data import FinData
-# from preprocessing import train_valid_split_stupidly
+from .data import FinData # это надо нам или не? 
 from sklearn.metrics import accuracy_score
 
-# визуализация предсказаний модели и матрицы 
-# подбирать время для предсказаний - optuna chose time
-
-# кросс-валидация 
-
+# визцализация предсказаний по матрице 
 # куча признаков и выбираются самые важные 
+# бутстрап 
 
-# чуть-чуть Лера переделает 
+
+# Надо что-то делать с тем, что у нас тут опять функции для обрезки времени 
+# Для оптуны они уже не юзаются, только в кросс-валидации 
 def restrict_time_down(df, year=2024, month=9, day=11, date=None):
         # обрезает датасет по времени ОТ
         df_copy = df.copy()
@@ -226,50 +224,42 @@ class CatboostFinModel():
         shap_values = self.get_shap_values()
         shap.summary_plot(shap_values, self.X_train)
 
-    def optuna_choose_time(self, valid_date : dt.datetime, days_num = 15, interval_num = 10, metric = "Accuracy"):
-        """
-        Выполняет оптимизацию времени валидации с использованием Optuna.
+    def optuna_choose_time(self, candles_interval_low = 3000,
+                                 candles_interval_high = 30000,  
+                                 number_of_trials = 10,
+                                 min_trials_for_pruner = 3):
 
-        Параметры:
-            valid_date (datetime): Дата начала валидации.
-            days_num (int): Количество дней для анализа.
-            interval_num (int): Интервалы для разбиения.
-            metric (str): Метрика для оптимизации (по умолчанию "Accuracy").
-        """
+        storage = RDBStorage(url="sqlite:///optuna_time_trials.db")
+        pruner = MedianPruner(n_min_trials=min_trials_for_pruner)
+        len_X_train = self.X_train.shape[0] 
 
-        storage = RDBStorage(url="sqlite:///optuna_trials.db")
-        pruner = MedianPruner(n_min_trials=3)
-        current_date = valid_date
-        self.X_val = self.X_val.drop(columns=["utc"])
-
+        if len_X_train < candles_interval_high:
+                raise ValueError(
+                    f"Максимальное количество свечей для обучения: {candles_interval_high}. "
+                    f"Количество свечей в датасете для обучения: {len_X_train}."
+                )
+        
         def objective(trial):
-            nonlocal current_date
-            days_from_date = trial.suggest_int("days_from_date", 
-                                         low=days_num, 
-                                         high=days_num*interval_num, 
-                                         step=interval_num)
+            nonlocal len_X_train
+            num_train_candles = trial.suggest_int("num_train_candles", 
+                                         low=candles_interval_low, 
+                                         high=candles_interval_high)
             
-            current_date = current_date - dt.timedelta(days=days_from_date)
-
-            current_X_train, indexes = restrict_time_down(self.X_train, 
-                                                 current_date.year, 
-                                                 current_date.month, 
-                                                 current_date.day)
-            
-            current_y_train = self.y_train[indexes]
+            current_X_train = self.X_train[len_X_train - num_train_candles : ]
+            current_y_train = self.y_train[len_X_train - num_train_candles : ]
 
             model = CatBoostClassifier(
-                **self.args, verbose=0 # выводим в консоль 0 информации о процессе обученя
+                **self.args
             )
 
-            pruning_callback = CatBoostPruningCallback(trial, metric)
+            pruning_callback = CatBoostPruningCallback(trial, metric=self.args["eval_metric"])
 
             model.fit(
                 current_X_train, 
                 current_y_train, 
                 eval_set=Pool(self.X_val, self.y_val, cat_features=self.cat), 
                 cat_features=self.cat, 
-                verbose=0,  
+                verbose=1000,  
                 callbacks=[pruning_callback]
             )
 
@@ -279,11 +269,56 @@ class CatboostFinModel():
             return accuracy
     
         study = optuna.create_study(direction="maximize", pruner=pruner, storage=storage, load_if_exists=True)
-        study.optimize(objective, n_trials=interval_num)
+        study.optimize(objective, n_trials=number_of_trials)
 
-    def optuna_choose_params(self, params : dict):
-        # полная валидация на параметры 
-        pass
+    def optuna_choose_params(self, changing_params : dict = {"learning_rate" : {"low" : 0.001, "high" : 0.03},
+                                                             "l2_leaf_reg" : {"low" : 3, "high" : 500}, 
+                                                             "depth" : {"low" : 3, "high" : 6}},
+                                                     min_trials_for_pruner = 3, 
+                                                     number_of_trials = 20):
+        
+        storage = RDBStorage(url="sqlite:///optuna_params_trials.db")
+        pruner = MedianPruner(n_min_trials=min_trials_for_pruner)
+
+        args = self.args
+
+        def objective(trial):
+            nonlocal args
+            suggested_learning_rate = trial.suggest_float("learning_rate", 
+                                                          low=changing_params["learning_rate"]["low"], 
+                                                          high=changing_params["learning_rate"]["high"])
+            
+            suggested_l2_leaf_reg = trial.suggest_int("l2_leaf_reg", 
+                                                      low=changing_params["l2_leaf_reg"]["low"], 
+                                                      high=changing_params["l2_leaf_reg"]["high"])
+            suggested_depth = trial.suggest_int("depth", 
+                                                low=changing_params["depth"]["low"], 
+                                                high=changing_params["depth"]["high"])
+
+            args["learning_rate"] = suggested_learning_rate
+            args["l2_leaf_reg"] = suggested_l2_leaf_reg
+            args["depth"] = suggested_depth
+
+            model = CatBoostClassifier(**args)
+
+            pruning_callback = CatBoostPruningCallback(trial, metric=args["eval_metric"])
+
+            model.fit(
+                self.X_train, 
+                self.y_train, 
+                eval_set=Pool(self.X_val, self.y_val, cat_features=self.cat), 
+                cat_features=self.cat, 
+                verbose=1000,  
+                callbacks=[pruning_callback]
+            )
+
+            pruning_callback.check_pruned()
+
+            accuracy = model.score(self.X_val, self.y_val)
+            return accuracy
+    
+        study = optuna.create_study(direction="maximize", pruner=pruner, storage=storage, load_if_exists=True)
+        study.optimize(objective, n_trials=number_of_trials)
 
     def cross_validation(self, df, cat, n_samples = 3):
         '''

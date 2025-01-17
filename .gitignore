@@ -11,6 +11,8 @@ model/catboost_info/
 examples/catboost_info/
 model/optuna_trials.db
 examples/catboost_info
+examples/optuna_time_trials.db
+examples/optuna_time_trials.db
 
 # Distribution / packaging
 .Python

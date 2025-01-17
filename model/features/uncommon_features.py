@@ -18,7 +18,7 @@ class UncommonFeaturesMixin:
         self.df['close_normed_low_bollinger'] = self.df['close']/self.df['low_bollinger']
 
         if 'SD' not in self.numeric_features:
-                self.numeric_features += ['SD', 'low_bollinger', 'upper_bollinger', 'close_normed_upper_bollinger', 'close_normed_low_bollinger']
+                self.numeric_features += ['SD', 'close_normed_upper_bollinger', 'close_normed_low_bollinger']
     
     def insert_stochastic_oscillator(self, windows_st = [3, 6, 18]): # TODO add other windows
 
