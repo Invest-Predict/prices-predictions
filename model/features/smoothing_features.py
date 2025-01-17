@@ -29,7 +29,7 @@ class SmoothingFeaturesMixin:
 
             if f'ma_{i}' not in self.numeric_features:
                 self.numeric_features += [f'ma_{i}', 
-                                          f'close_normed_ma_{i}'
+                                          f'close_normed_ma_{i}',
                                           f'low_normed_ma_{i}', 
                                           f'high_normed_ma_{i}']
     
