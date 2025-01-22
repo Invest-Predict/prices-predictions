@@ -51,24 +51,15 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         # режем по количеству свечей 
         pass
 
-    def restrict_time_down(self, date : dt.datetime):
+    def restrict_time_down(self, date : dt.datetime = None, months = 2, days = 0):
+        if date is None:
+            date = self.df['utc'].iloc[-1] - pd.DateOffset(months=months, days=days)
         self.df = self.df[self.df["utc"] >= date].reset_index().drop(columns=['index'])
 
-
-    def restrict_time_up(self, date : dt.datetime):
+    def restrict_time_up(self, date : dt.datetime = None, months = 2, days = 0):
+        if date is None:
+            date = self.df['utc'].iloc[-1] - pd.DateOffset(months=months, days=days)
         self.df = self.df[self.df["utc"] <= date].reset_index().drop(columns=['index'])
-
-    def restrict_time_up_stupidly(self, months=2, days=0):
-        # берёт первую дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
-
-        last_day = self.df['utc'][0] + pd.DateOffset(months=months, days=days)
-        self.restrict_time_up(date=last_day)
-
-    def restrict_time_down_stupidly(self, months=2, days=0):
-        # берёт последнюю дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
-
-        last_day = self.df['utc'].iloc[-1] - pd.DateOffset(months=months, days=days)
-        self.restrict_time_down(date=last_day)
 
     # Функция для увеличения интервала свечей
     def merge_candles(self, freq):

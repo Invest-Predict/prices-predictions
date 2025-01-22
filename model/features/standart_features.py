@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 class StandartFeaturesMixin:
     def __init__(self):
@@ -22,7 +23,6 @@ class StandartFeaturesMixin:
 
             if f'close_norms_{i}' not in self.numeric_features:
                 self.numeric_features += [f'close_norms_{i}', f'close_high_norms_{i}', f'high_norms_{i}', f'low_norms_{i}']
-
     
     def insert_rsi(self, windows_rsi = [3, 6, 18]):
         for i in windows_rsi:

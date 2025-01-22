@@ -17,38 +17,6 @@ from sklearn.metrics import accuracy_score
 # бутстрап 
 
 
-# Надо что-то делать с тем, что у нас тут опять функции для обрезки времени 
-# Для оптуны они уже не юзаются, только в кросс-валидации 
-def restrict_time_down(df, year=2024, month=9, day=11, date=None):
-        # обрезает датасет по времени ОТ
-        df_copy = df.copy()
-        if date is not None:
-            df_copy = df_copy[df_copy["utc"] >= date].reset_index().drop(columns=['index'])
-            return df_copy
-        df_copy = pl.from_pandas(df_copy.reset_index()).rename({"index" : "old_indexes"})
-        df_copy = df_copy.filter(pl.col("utc") >= pl.datetime(year, month, day))
-        df_copy = df_copy.to_pandas()
-        return df_copy.drop(columns=["old_indexes", "utc"]), df_copy.old_indexes 
-
-def restrict_time_up(df, year=2024, month=9, day=11, date = None):
-    # обрезает датасет по времени ДО
-    df_copy = df.copy()
-
-    if date is not None:
-        df_copy = df_copy[df_copy["utc"] <= date].reset_index().drop(columns=['index'])
-        return df_copy
-
-    df_copy = pl.from_pandas(df_copy.reset_index()).rename({"index" : "old_indexes"})
-    df_copy = df_copy.filter(pl.col("utc") >= pl.datetime(year, month, day))
-    df_copy = df_copy.to_pandas()
-    return df_copy.drop(columns=["old_indexes", "utc"]), df_copy.old_indexes
-
-def restrict_time_up_stupidly(df, months=2, days=0):
-    # берёт первую дату в датасете (пусть это 2024.09.11) и оберзает все даты большие чем 2024.09.11 + months + days
-
-    last_day = df['utc'][0] + pd.DateOffset(months=months, days=days)
-    return restrict_time_up(df, date=last_day)
-
 def get_constant_accuracy(y_val):
         # возвращает точность контантного предсказания на валидационной выборке
         val_const = pl.from_pandas(y_val.reset_index())
@@ -57,26 +25,7 @@ def get_constant_accuracy(y_val):
         ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
 
         return zeroes/(ones + zeroes)
- 
-def train_valid_split_stupidly(data,  
-                               target, last_days = 2,
-                               utc = []): # utc здесь добавлено для optuna 
-        
-    # возвращает тестовую и валидационную выборки в завимости от заданного времени
 
-    split_date = data["utc"].iloc[-1] - pd.DateOffset(days=last_days)
-    
-    train_df = data[data["utc"] < split_date]
-
-    X_train = train_df.drop(columns=target)
-    y_train = train_df[target]
-
-    test_df = data[data["utc"] >= split_date]
-
-    X_val = test_df.drop(columns=target)
-    y_val = test_df[target]
-
-    return X_train, X_val, y_train, y_val
 
 
 class CatboostFinModel():
@@ -320,55 +269,41 @@ class CatboostFinModel():
         study = optuna.create_study(direction="maximize", pruner=pruner, storage=storage, load_if_exists=True)
         study.optimize(objective, n_trials=number_of_trials)
 
-    def cross_validation(self, df, cat, n_samples = 3):
+    def cross_validation(self, X, y, n_samples = 5):
         '''
-        данная функция рандомно берёт два месяца начиная с 2024.01.01 и на них обучает, потом тестит на последующих двух дня
-        если точность константного предсказания лежит в (0.49, 0.52), то добавляем полученную accuracy к итоговому списку
-        в конце считаем среднее ариф.  из списка
+        кросс валиадция, в которой выборка бьётся на (n_samples + 2)
+        каждый раз (всего n_folds) выборка train увеличивается на один fold, а test и val остаются таким же по размеру
+        на тестовой выборке считается accuracy и добавляется в массив
+        на выходе средняя accuracy
+        подробнее здесь в секции "Кросс-валидация на временных рядах" - https://education.yandex.ru/handbook/ml/article/kross-validaciya
         '''
 
         #подумать, как учитывать тот факт, что тестовые выборки не всегда одного размера (пока что надо как-то в среднем арифметическом веса учитывать)
         
-        trials_sum, trials_cnt = 0, 0
-        trial_on_const_accuracy = 3
-
-        while n_samples > 0:
-            # np.random.seed(100)
-            month = np.random.randint(low=7, high=9)
-            day = np.random.randint(31)
-
-            first_date = dt.datetime(2024, 1, 1) + relativedelta(months=month, days=day)
-            df_restricted = restrict_time_down(df, date=first_date)
-            df_restricted = restrict_time_up_stupidly(df_restricted)
-
-            print('fist_date:', df_restricted['utc'].iloc[0], '- last_date:', df_restricted['utc'].iloc[-1])
-
-
-            X_train, X_val, y_train, y_val = train_valid_split_stupidly(df_restricted, target = "direction_binary", last_days=2)
-            const_acc = get_constant_accuracy(y_val)
-            print('const_acc:', const_acc)
-            
-            if trial_on_const_accuracy > 0 and (const_acc > 0.52 or const_acc < 0.49):
-                trial_on_const_accuracy -= 1
-                continue
-
-            print(y_val.shape)
-            new_model = self.model
-            new_model.fit(X_train, y_train, eval_set=Pool(X_val, y_val, cat_features = cat), cat_features = cat, verbose=False)
-
-            # const_acc = get_constant_accuracy(y_val)
-            # print('const_acc:', const_acc)
-            
-            # if trial_on_const_accuracy > 0 and const_acc > 0.52 or const_acc < 0.49:
-            #     trial_on_const_accuracy -= 1
-            #     continue
-
-            trial_on_const_accuracy = 3
-            n_samples -= 1
-            y_pred = new_model.predict(X_val)
-            acc = accuracy_score(y_pred, y_val)
-            trials_sum += acc
-            trials_cnt += 1
-            print(f"On trial {n_samples} with date {first_date} got accuracy {acc}")
+        fold_size = X.shape[0] // (n_samples + 2)
+        scores = []
         
-        return trials_sum / trials_cnt
+        # Цикл по всем частям
+        for i in range(n_samples):
+            # Выборка тренировочной и тестовой частей
+            train_idx = range(0, (i + 1) * fold_size)
+            val_idx = range((i + 1) * fold_size, (i + 2) * fold_size)
+            test_idx = range((i + 2) * fold_size, (i + 3) * fold_size)
+            
+            # Обучение модели на тренировочной части
+            model = self.model
+            model.fit(
+                X.iloc[train_idx, :], 
+                y.iloc[train_idx], 
+                eval_set=Pool(X.iloc[val_idx, :], y.iloc[val_idx], cat_features=self.cat), 
+                cat_features=self.cat, 
+                verbose=1000
+            )
+
+            # Прогнозирование на тестовой части и сохранение результата
+            predictions = model.predict(X.iloc[test_idx, :])
+            scores.append(accuracy_score(y.iloc[test_idx], predictions))
+        
+        print(f"Array of scores: {scores}")
+            
+        return sum(scores) / n_samples
