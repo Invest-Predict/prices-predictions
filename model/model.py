@@ -17,16 +17,6 @@ from sklearn.metrics import accuracy_score
 # TODO optuna l1 reg
 
 
-def get_constant_accuracy(y_val): # TODO поч это здесь? 
-        # возвращает точность контантного предсказания на валидационной выборке
-        val_const = pl.from_pandas(y_val.reset_index())
-        consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
-        zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
-        ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
-
-        return zeroes/(ones + zeroes)
-
-
 class CatboostFinModel():
     """
     Класс для работы с моделью CatBoostClassifier для финансовых данных.
