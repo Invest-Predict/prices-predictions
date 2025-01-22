@@ -275,7 +275,7 @@ class CatboostFinModel():
                                                              "l2_leaf_reg" : {"low" : 3, "high" : 500}, 
                                                              "depth" : {"low" : 3, "high" : 6}},
                                                      min_trials_for_pruner = 3, 
-                                                     number_of_trials = 20):
+                                                     number_of_trials = 10):
         
         storage = RDBStorage(url="sqlite:///optuna_params_trials.db")
         pruner = MedianPruner(n_min_trials=min_trials_for_pruner)

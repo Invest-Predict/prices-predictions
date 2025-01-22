@@ -30,7 +30,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
             self.df = self.df.rename(columns=column_names, errors='ignore')
         
         self.df.utc = pd.to_datetime(self.df.utc).dt.tz_localize(None)
-        self.df.drop_duplicates(inplace=True)
+        self.df.drop_duplicates(inplace=True) 
         self.target : list
 
         self.cat_features = []
