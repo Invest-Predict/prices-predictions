@@ -12,12 +12,12 @@ from optuna.integration import CatBoostPruningCallback
 from .data import FinData # это надо нам или не? 
 from sklearn.metrics import accuracy_score
 
-# визцализация предсказаний по матрице 
-# куча признаков и выбираются самые важные 
-# бутстрап 
+# TODO визуализация? предсказаний по матрице 
+# TODO бутстрап 
+# TODO optuna l1 reg
 
 
-def get_constant_accuracy(y_val):
+def get_constant_accuracy(y_val): # TODO поч это здесь? 
         # возвращает точность контантного предсказания на валидационной выборке
         val_const = pl.from_pandas(y_val.reset_index())
         consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
@@ -25,7 +25,6 @@ def get_constant_accuracy(y_val):
         ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
 
         return zeroes/(ones + zeroes)
-
 
 
 class CatboostFinModel():
@@ -121,7 +120,7 @@ class CatboostFinModel():
         return self.model.score(X_test, y_test)
 
     def print_model_best_features(self):
-        # хз что это я подумаю может убрать
+        # хз что это, были какие-то мысли, но я подумаю может убрать
         print(f"Точность: {self.best_accuracy}")
         print("Набор признаков: ")
         for feature in self.features_best_accuracy:
@@ -177,6 +176,21 @@ class CatboostFinModel():
                                  candles_interval_high = 30000,  
                                  number_of_trials = 10,
                                  min_trials_for_pruner = 3):
+        
+        """
+        Оптимизирует количество свечей для обучения модели с использованием Optuna.
+
+        Параметры:
+            candles_interval_low (int): Минимальное количество свечей для обучения.
+            candles_interval_high (int): Максимальное количество свечей для обучения.
+            number_of_trials (int): Количество попыток для Optuna.
+            min_trials_for_pruner (int): Минимальное количество попыток для активации прунера.
+
+        Исключения:
+            ValueError: Выбрасывается, если размер обучающего датасета меньше candles_interval_high.
+
+        Оптимизация проводится с использованием MedianPruner, чтобы исключить малообещающие гипотезы.
+        """
 
         storage = RDBStorage(url="sqlite:///optuna_time_trials.db")
         pruner = MedianPruner(n_min_trials=min_trials_for_pruner)
@@ -225,6 +239,24 @@ class CatboostFinModel():
                                                              "depth" : {"low" : 3, "high" : 6}},
                                                      min_trials_for_pruner = 3, 
                                                      number_of_trials = 10):
+        """
+        Оптимизирует гиперпараметры модели CatBoostClassifier с использованием Optuna.
+
+        Параметры:
+            changing_params (dict): Словарь параметров для оптимизации. Ключи - названия параметров,
+                значения - словари с "low" и "high" границами значений (по умолчанию содержит learning_rate, l2_leaf_reg и depth).
+            min_trials_for_pruner (int): Минимальное количество попыток для активации прунера.
+            number_of_trials (int): Количество попыток для Optuna.
+
+        Пример changing_params:
+            {
+                "learning_rate": {"low": 0.001, "high": 0.03},
+                "l2_leaf_reg": {"low": 3, "high": 500},
+                "depth": {"low": 3, "high": 6}
+            }
+
+        Оптимизация проводится с использованием MedianPruner, чтобы исключить малообещающие гипотезы.
+        """
         
         storage = RDBStorage(url="sqlite:///optuna_params_trials.db")
         pruner = MedianPruner(n_min_trials=min_trials_for_pruner)
@@ -271,13 +303,12 @@ class CatboostFinModel():
 
     def cross_validation(self, X, y, n_samples = 5):
         '''
-        кросс валиадция, в которой выборка бьётся на (n_samples + 2)
+        Кросс валиадция, в которой выборка бьётся на (n_samples + 2)
         каждый раз (всего n_folds) выборка train увеличивается на один fold, а test и val остаются таким же по размеру
         на тестовой выборке считается accuracy и добавляется в массив
         на выходе средняя accuracy
         подробнее здесь в секции "Кросс-валидация на временных рядах" - https://education.yandex.ru/handbook/ml/article/kross-validaciya
         '''
-
         #подумать, как учитывать тот факт, что тестовые выборки не всегда одного размера (пока что надо как-то в среднем арифметическом веса учитывать)
         
         fold_size = X.shape[0] // (n_samples + 2)

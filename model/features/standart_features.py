@@ -25,6 +25,12 @@ class StandartFeaturesMixin:
                 self.numeric_features += [f'close_norms_{i}', f'close_high_norms_{i}', f'high_norms_{i}', f'low_norms_{i}']
     
     def insert_rsi(self, windows_rsi = [3, 6, 18]):
+        """
+        Добавляет значения индекса относительной силы (RSI).
+
+        Параметры:
+            windows_rsi (list): Список временных окон для расчета RSI.
+        """
         for i in windows_rsi:
             self.df[f'rsi_{i}'] = self.df['close'] - self.df['close'].shift(i)
             self.df[f'close_normed_rsi_{i}'] = self.df['close']/self.df[f'rsi_{i}']
@@ -34,6 +40,12 @@ class StandartFeaturesMixin:
 
     
     def insert_high_low_diff(self, windows_hl = [3, 6, 18]):
+        """
+        Добавляет разницу между high и low в свече ценами для заданных временных окон.
+
+        Параметры:
+            windows_hl (list): Список временных окон для расчета разницы high-low.
+        """
         for i in windows_hl:
             self.df[f'hl_diff_{i}'] = self.df['high'].shift(i) - self.df['low'].shift(i)
             self.df[f'close_normed_hl_diff_{i}'] = self.df['close']/self.df[f'hl_diff_{i}']

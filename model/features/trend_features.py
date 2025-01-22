@@ -10,6 +10,7 @@ def butter_filter(data, cutoff_frequency, fs, order=4):
 
 
 class TrendFeaturesMixin:
+    # в модерации весь класс 
     def __init__(self):
         self.df: pd.DataFrame() = None
         self.cat_features: list = []

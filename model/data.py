@@ -38,13 +38,31 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         self.make_binary_class_target(target_name="direction_binary")
 
     def make_binary_class_target(self, target_name):
+        """
+        Создаёт бинарный таргет на основе изменения цены закрытия.
+
+        Параметры:
+            target_name (str): Название колонки для таргета.
+        """
         self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
         self.target = [target_name]
 
     def get_numeric_features(self):
+        """
+        Возвращает список добавленных к текущему моменту числовых признаков.
+
+        Возвращает:
+            list: Список названий числовых колонок.
+        """
         return self.numeric_features
     
     def get_cat_features(self):
+        """
+        Возвращает список добавленных к текущему моменту категориальных признаков.
+
+        Возвращает:
+            list: Список названий категориальных колонок.
+        """
         return self.cat_features
 
     def restrict_time_by_candles(self, date: dt.datetime, number_before, num_after):
@@ -52,18 +70,39 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         pass
 
     def restrict_time_down(self, date : dt.datetime = None, months = 2, days = 0):
+        """
+        Ограничивает данные, оставляя строки после указанной даты.
+
+        Параметры:
+            date (datetime, optional): Дата отсечения. Если не указано, используется текущая дата минус заданный интервал.
+            months (int): Количество месяцев до текущей даты для отсечения.
+            days (int): Количество дней до текущей даты для отсечения.
+        """
         if date is None:
             date = self.df['utc'].iloc[-1] - pd.DateOffset(months=months, days=days)
         self.df = self.df[self.df["utc"] >= date].reset_index().drop(columns=['index'])
 
     def restrict_time_up(self, date : dt.datetime = None, months = 2, days = 0):
+        """
+        Ограничивает данные, оставляя строки до указанной даты.
+
+        Параметры:
+            date (datetime, optional): Дата отсечения. Если не указано, используется текущая дата минус заданный интервал.
+            months (int): Количество месяцев до текущей даты для отсечения.
+            days (int): Количество дней до текущей даты для отсечения.
+        """
         if date is None:
             date = self.df['utc'].iloc[-1] - pd.DateOffset(months=months, days=days)
         self.df = self.df[self.df["utc"] <= date].reset_index().drop(columns=['index'])
 
     # Функция для увеличения интервала свечей
     def merge_candles(self, freq):
-        # Берем первое значение колонок, помеченных как open, последнее для high, максимальное для high и минимальное для low
+        """
+        Объединяет свечи в соответствии с указанной частотой.
+
+        Параметры:
+            freq (str): Частота объединения (например, '1H' для объединения по часам).
+        """
         self.df = self.df.set_index('utc').groupby(pd.Grouper(freq=freq)).agg({'open': 'first', 'close': 'last', 'high': 'max', 'low': 'min'}).dropna().reset_index()
 
     def visualize_time_frame(self,
@@ -157,7 +196,18 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
                          windows_high_low_diff=None, 
                          windows_stoch_osc=None, 
                          common_windows=[3, 6, 18]):
-        
+        """
+        Вставляет в DataFrame все реализованные признаки.
+
+        Параметры:
+            windows_shifts_norms (list, optional): Список временных окон для нормализованных сдвигов.
+            windows_ma (list, optional): Список временных окон для расчёта простых скользящих средних.
+            windows_ema (list, optional): Список временных окон для расчёта экспоненциальных скользящих средних.
+            windows_rsi (list, optional): Список временных окон для расчёта индикатора RSI.
+            windows_high_low_diff (list, optional): Список временных окон для расчёта разницы между high и low.
+            windows_stoch_osc (list, optional): Список временных окон для стохастического осциллятора.
+            common_windows (list): Список временных окон по умолчанию для вставки нескольких признаков.
+        """
         self.insert_shifts_norms(common_windows if windows_shifts_norms==None else windows_shifts_norms)
         self.insert_time_features()
         self.insert_holidays()
@@ -175,6 +225,12 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         # self.insert_trend_deviation()
 
     def get_columns(self):
+        """
+        Возвращает список всех колонок текущего DataFrame.
+
+        Возвращает:
+            list: Список названий всех колонок DataFrame.
+        """
         return self.df.columns
     
     def check_stationarity(self, columns):
