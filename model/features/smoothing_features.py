@@ -85,6 +85,9 @@ class SmoothingFeaturesMixin:
             if f'hma_{i}' not in self.numeric_features:
                 self.numeric_features += [f'close_normed_hma_{i}']
 
+
+    # Этот признак в модерации :)
+    
     # def insert_adaptive_moving_average(self, windows_ama):
     #     """
     #     Добавляет адаптивную скользящую среднюю (Adaptive Moving Average, AMA).

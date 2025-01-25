@@ -101,8 +101,7 @@ def train_valid_split(data,
     return X_train, X_val, y_train, y_val
 
 def train_valid_split_stupidly(data,  
-                               target, last_days = 2,
-                               utc = []): # utc здесь добавлено для optuna 
+                               target, last_days = 2): # utc здесь добавлено для optuna 
         
     # возвращает тестовую и валидационную выборки в завимости от заданного времени
 
