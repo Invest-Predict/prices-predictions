@@ -66,6 +66,51 @@ class UncommonFeaturesMixin:
         Признак:
             - 'target_predict': Случайный прогноз на основе экспоненциального преобразования и смещения.
         """
-        self.df['target_predict'] = np.exp(np.log1p(self.df['close'].shift(15)) + 4 * np.random.normal(1)) - self.df['close']
-        if 'target_predict' not in self.numeric_features:
-            self.numeric_features += ['target_predict']
+        # self.df['target_predict'] = np.exp(np.log1p(self.df['close'].shift(15)) + 4 * np.random.normal(1)) - self.df['close']
+        # if 'target_predict' not in self.numeric_features:
+        #     self.numeric_features += ['target_predict']
+
+        n = self.df.shape[0]
+        sum_s, sum_t = np.log1p(self.df['close'][0]), self.df['volume'][0]
+        for i in range(n - 1):
+            sum_s += np.log1p(self.df['close'][i + 1]) - np.log1p(self.df['close'][i])
+            sum_t += self.df['volume'][i + 1]
+
+        sum_s, sum_t = sum_s / n, sum_t / n
+        a = sum_s / sum_t
+
+        su = (np.log1p(self.df['close'][0]) - a * self.df['volume'][0]) / np.sqrt(self.df['volume'][0])
+        for i in range(n - 1):
+            diff_t = self.df['volume'][i + 1]
+            su += (np.log1p(self.df['close'][i + 1]) - np.log1p(self.df['close'][i]) - a * diff_t) / np.sqrt(diff_t)
+        su /= n
+
+        sigma2 = 0
+
+        for i in range(n - 1):
+            diff_t = self.df['volume'][i + 1]
+            sigma2 += ((np.log1p(self.df['close'][i + 1]) - np.log1p(self.df['close'][i]) - a * diff_t) / np.sqrt(diff_t) - su) ** 2
+
+        sigma2 /= n
+
+        m = 20000000
+        s = [0] * (m + 1)
+        x_t = [0] * (m + 1)
+        eps = np.random.choice([-1, 1], m)
+        for i in range(1, m + 1):
+            s[i] = s[i - 1] + eps[i - 1]
+
+        def f(t):
+            k = t * m
+            if abs(k - int(k)) < 1e-6:
+                return np.sqrt(m) * (s[int(k)] / np.sqrt(m))
+            else:
+                return  np.sqrt(m) * (s[int(k)] / np.sqrt(m) + (k - int(k)) * eps[int(k) + 1] / np.sqrt(m))
+
+        log_s0 = np.log1p(self.df['close'][0])
+        s_n = [log_s0] * n
+        for i in range(1, n):
+            # print(a * df['T_n'][i], "-", f(df['T_n'][i] / m) * np.sqrt(sigma2))
+            s_n[i] = log_s0 + a * self.df['volume'][i] + f(self.df['volume'][i] / m) * np.sqrt(sigma2)
+        
+        self.df['target_predict'] = np.exp(s_n)
