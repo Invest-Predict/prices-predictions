@@ -10,7 +10,7 @@ from optuna.pruners import MedianPruner
 from optuna.storages import RDBStorage
 from optuna.integration import CatBoostPruningCallback
 from .data import FinData # это надо нам или не? 
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 
 # TODO визуализация? предсказаний по матрице 
 # TODO бутстрап 
@@ -95,30 +95,6 @@ class CatboostFinModel():
     
     def __call__(self, X_test):
         return self.predict(X_test)
-    
-    def score(self, X_test, y_test):
-        """
-        Вычисляет точность (Accuracy) модели на тестовых данных.
-
-        Параметры:
-            X_test (pd.DataFrame): Признаки тестовой выборки.
-            y_test (pd.Series): Реальные значения тестовой выборки.
-
-        Возвращает:
-            float: Точность модели.
-        """
-        return self.model.score(X_test, y_test)
-
-    def print_model_best_features(self):
-        # хз что это, были какие-то мысли, но я подумаю может убрать
-        print(f"Точность: {self.best_accuracy}")
-        print("Набор признаков: ")
-        for feature in self.features_best_accuracy:
-            print(feature)
-    
-    def get_model_best_features(self):
-        # это с верхним вместе идет 
-        return self.best_accuracy, self.features_best_accuracy
 
     def print_constant_accuracy(self, y_test):
         """
@@ -134,6 +110,17 @@ class CatboostFinModel():
 
         print(f"Точность константного предсказания {max(zeroes, ones)/(ones + zeroes)}")
 
+    def score(self, X_scored, y_scored):
+        y_pred = self.model.predict(X_scored)
+        print(classification_report(y_scored, y_pred))
+
+    def _get_sorted_feature_importances(self):
+        indexes = np.argsort(self.model.feature_importances_)
+        sorted_importances = self.model.feature_importances_[indexes]
+        sorted_names = np.array(self.model.feature_names_)[indexes]
+        return zip(sorted_importances, sorted_names)
+
+
     def print_feature_importances(self):
         """
         Выводит важности признаков, отсортированные по их влиянию на модель.
@@ -143,6 +130,12 @@ class CatboostFinModel():
         sorted_names = np.array(self.model.feature_names_)[indexes]
         for i, imp in enumerate(sorted_importances):
             print(imp, sorted_names[i])
+
+    def restrict_features_by_importance(self):
+        features = self._get_sorted_feature_importances()
+        pass
+        
+    
 
     def get_shap_values(self):
         """
