@@ -14,7 +14,6 @@ from sklearn.metrics import accuracy_score, classification_report
 
 # TODO визуализация? предсказаний по матрице 
 # TODO бутстрап 
-# TODO optuna l1 reg
 
 
 class CatboostFinModel():
@@ -72,13 +71,9 @@ class CatboostFinModel():
         """
         Обучает модель CatBoostClassifier на обучающей выборке с использованием валидационной выборки.
         """
-        # чтобы не нужно было постоянно заново разделять выборку перед fit, достаточно просто установить numeric и сat в модели 
-        # и передать можно со всеми признаками X_val и X_train
         self.X_val = self.X_val[self.numeric + self.cat]
         self.X_train = self.X_train[self.numeric + self.cat]
         self.model.fit(self.X_train, self.y_train, eval_set=Pool(self.X_val, self.y_val, cat_features = self.cat), cat_features = self.cat)
-        # self.print_feature_importances()
-        # self.visualise_shap_values()
         return self
 
     def predict(self, X_test):
@@ -96,31 +91,16 @@ class CatboostFinModel():
     def __call__(self, X_test):
         return self.predict(X_test)
     
-    def get_constant_accuracisy(self, y_test):
+    def get_constant_accuracy(self, y_test, unknown = False):
         val_const = pl.from_pandas(y_test.reset_index())
         consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
         zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
         ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
-        return max(zeroes, ones)/(ones + zeroes)
+        return max(zeroes, ones)/(ones + zeroes) if not unknown else zeroes/(ones + zeroes)
 
-
-    def print_constant_accuracy(self, y_test):
-        """
-        Выводит точность константного предсказания (конкретно, всегда "0").
-
-        Параметры:
-            y_test (pd.Series): Реальные значения для валидационной выборки.
-        """
-        val_const = pl.from_pandas(y_test.reset_index())
-        consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
-        zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
-        ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
-
-        print(f"Точность константного предсказания {max(zeroes, ones)/(ones + zeroes)}")
-
-    def score(self, X_scored, y_scored):
+    def score(self, X_scored, y_scored, output_dict=False):
         y_pred = self.model.predict(X_scored)
-        return(classification_report(y_scored, y_pred, output_dict=True))
+        return(classification_report(y_scored, y_pred, output_dict=output_dict))
 
     def _get_sorted_feature_importances(self):
         indexes = np.argsort(self.model.feature_importances_)
@@ -143,7 +123,6 @@ class CatboostFinModel():
         features = self._get_sorted_feature_importances()
         pass
         
-    
 
     def get_shap_values(self):
         """
