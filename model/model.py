@@ -95,6 +95,14 @@ class CatboostFinModel():
     
     def __call__(self, X_test):
         return self.predict(X_test)
+    
+    def get_constant_accuracisy(self, y_test):
+        val_const = pl.from_pandas(y_test.reset_index())
+        consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
+        zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
+        ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
+        return max(zeroes, ones)/(ones + zeroes)
+
 
     def print_constant_accuracy(self, y_test):
         """
@@ -112,7 +120,7 @@ class CatboostFinModel():
 
     def score(self, X_scored, y_scored):
         y_pred = self.model.predict(X_scored)
-        print(classification_report(y_scored, y_pred))
+        return(classification_report(y_scored, y_pred, output_dict=True))
 
     def _get_sorted_feature_importances(self):
         indexes = np.argsort(self.model.feature_importances_)

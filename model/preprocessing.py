@@ -67,13 +67,13 @@ def scale_num_data(fit_data, tranform_data, numeric, scaler : Scaler):
     
 #     train_indexes = list(range(num_train_candles))
 #     valid_indexes = list(range(num_train_candles, num_train_candles + num_valid_candles))
-#     train_ind = num_train_candles
+#     ptr_ind = num_train_candles
 #     # valid_ind = num_valid_candles
 #     for i in range(1, n_periods):
-#         train_ind += num_valid_candles
-#         train_indexes += list(range(train_ind, train_ind + num_train_candles))
-#         train_ind += num_train_candles
-#         valid_indexes += list(range(train_ind, train_ind + num_valid_candles))
+#         ptr_ind += num_valid_candles
+#         train_indexes += list(range(ptr_ind, ptr_ind + num_train_candles))
+#         ptr_ind += num_train_candles
+#         valid_indexes += list(range(ptr_ind, ptr_ind + num_valid_candles))
 
 #     restr_data = (data[data['utc'] >= start_data]).reset_index()
 #     X_train = restr_data[numeric + cat].iloc[train_indexes]
@@ -92,21 +92,21 @@ def merged_split(data,
                  num_test_candles=0):
     
     train_indexes = list(range(num_train_candles))
-    train_ind = num_train_candles
-    valid_indexes = list(range(train_ind, train_ind + num_valid_candles))
-    train_ind += num_valid_candles
-    test_indexes = list(range(train_ind, train_ind + num_test_candles))
-    train_ind += num_test_candles
+    ptr_ind = num_train_candles
+    valid_indexes = list(range(ptr_ind, ptr_ind + num_valid_candles))
+    ptr_ind += num_valid_candles
+    test_indexes = list(range(ptr_ind, ptr_ind + num_test_candles))
+    ptr_ind += num_test_candles
     for _ in range(1, n_periods):
-        train_indexes += list(range(train_ind, train_ind + num_train_candles))
-        train_ind += num_train_candles
-        valid_indexes += list(range(train_ind, train_ind + num_valid_candles))
-        train_ind += num_valid_candles
-        test_indexes += list(range(train_ind, train_ind + num_test_candles))
-        train_ind += num_test_candles
+        train_indexes += list(range(ptr_ind, ptr_ind + num_train_candles))
+        ptr_ind += num_train_candles
+        valid_indexes += list(range(ptr_ind, ptr_ind + num_valid_candles))
+        ptr_ind += num_valid_candles
+        test_indexes += list(range(ptr_ind, ptr_ind + num_test_candles))
+        ptr_ind += num_test_candles
 
     restr_data = (data[data['utc'] >= start_data]).reset_index()
-    # print(restr_data)
+
     X_train = restr_data[numeric + cat].iloc[train_indexes]
     y_train = restr_data[target].iloc[train_indexes]
     X_val = restr_data[numeric + cat].iloc[valid_indexes]
