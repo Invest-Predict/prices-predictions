@@ -329,3 +329,36 @@ class CatboostFinModel():
         print(f"Array of scores: {scores}")
             
         return sum(scores) / n_samples
+    
+    def test_trading(self, X, y, train_size=2000, val_size=1000, test_size=1000, initial_budget = 10000, cat = [], num = [], print_actions = False):
+        '''
+        Примитиваня стратегия, пусть мы просто пока покупаем акцию сейчас, если предполагаем, что через десять минут она вырастит в цене
+        (через 10 минут в этом случае её продаём)
+        В ином случае мы ничего не делаем (ждём следущий период)
+        Но также у нас есть ограничение - это бюджет (он ограчен => не всегда сможем купить акцию, чтобы продать её через 10 минут)
+        '''
+        X_train, X_val, X_test = X[-(train_size + val_size + test_size):-(val_size + test_size)], X[-(val_size + test_size): -test_size], X[-test_size:]
+        y_train, y_val, y_test = y[-(train_size + val_size + test_size):-(val_size + test_size)], y[-(val_size + test_size): -test_size], y[-test_size:]
+
+        self.set_datasets(X_train, X_val, y_train, y_val)
+        self.set_features(num, cat)
+
+        self.fit()
+
+        money = initial_budget
+        for i in range(X_test.shape[0]):
+            y_pred = self.predict(X_test[num + cat].iloc[i])
+            close_in_ten_min = X_test['close'].iloc[i]
+            open_now = X_test['open'].iloc[i]
+
+
+            if money >= open_now and y_pred == 1:
+                money += (close_in_ten_min - open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
+                if print_actions:
+                    s_add = ""
+                    if close_in_ten_min < open_now:
+                        s_add = " Daaaaaaaaaamn I was wrong"
+                    print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min}" + s_add)
+                        
+
+        print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
