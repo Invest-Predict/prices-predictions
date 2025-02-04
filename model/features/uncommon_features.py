@@ -49,15 +49,18 @@ class UncommonFeaturesMixin:
         self.df['stochastic_oscillator'] = (self.df['close'] - self.df['low'].shift(18)) / (self.df['high'].shift(18) - self.df['low'].shift(18))
         self.df['close_normed_stochastic_oscillator'] = self.df['close'] / self.df['stochastic_oscillator']
         
-        if 'stochastic_oscillator' not in self.numeric_features:
-            self.numeric_features += ['stochastic_oscillator', 'close_normed_stochastic_oscillator']
+        if 'close_normed_stochastic_oscillator' not in self.numeric_features:
+            self.numeric_features += ['close_normed_stochastic_oscillator']
+
+            # self.numeric_features += ['stochastic_oscillator', 'close_normed_stochastic_oscillator']
 
         for i in windows_st:
             self.df[f'stochastic_oscillator_ma_{i}'] = self.df['stochastic_oscillator'].rolling(i).mean()
             self.df[f'close_normed_stochastic_oscillator_ma_{i}'] = self.df['close'] / self.df[f'stochastic_oscillator_ma_{i}']
 
-            if f'stochastic_oscillator_ma_{i}' not in self.numeric_features:
-                self.numeric_features += [f'stochastic_oscillator_ma_{i}', f'close_normed_stochastic_oscillator_ma_{i}']
+            if f'closed_normed_stochastic_oscillator_ma_{i}' not in self.numeric_features:
+                self.numeric_features += [f'close_normed_stochastic_oscillator_ma_{i}']
+                # self.numeric_features += [f'stochastic_oscillator_ma_{i}', f'close_normed_stochastic_oscillator_ma_{i}']
     
     def insert_random_prediction(self): # TODO think, if other normalization is needed
         """
@@ -114,3 +117,5 @@ class UncommonFeaturesMixin:
             s_n[i] = log_s0 + a * self.df['volume'][i] + f(self.df['volume'][i] / m) * np.sqrt(sigma2)
         
         self.df['target_predict'] = np.exp(s_n)
+        if 'target_predict' not in self.numeric_features:
+                self.numeric_features += ['target_predict']
