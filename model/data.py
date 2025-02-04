@@ -17,14 +17,17 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
     визуализировать и подготавливать таргет для моделей машинного обучения.
     """
-    def __init__(self, df_path, column_names=None):
+    def __init__(self, df, column_names=None):
         """
         Инициализирует объект FinData, загружая данные из CSV-файла.
 
         Параметры:
-            df_path (str): Путь к CSV-файлу с данными.
+            df (str | pd.Dataframe): Путь к CSV-файлу или pd.Dataframe с данными .
         """
-        self.df = pd.read_csv(df_path)
+        if isinstance(df, pd.DataFrame):
+            self.df = df
+        else:
+            self.df = pd.read_csv(df)
 
         if column_names is not None:
             self.df = self.df.rename(columns=column_names, errors='ignore')
@@ -34,7 +37,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         self.target : list
 
         self.cat_features = []
-        self.numeric_features = ['volume'] # я бы остальное по умолчанию не стала добавлять, потому что оно не нормировано 
+        self.numeric_features = ['volume'] # я бы остальное по умолчанию не стала добавля   ть, потому что оно не нормировано 
         self.make_binary_class_target(target_name="direction_binary")
 
     def make_binary_class_target(self, target_name):

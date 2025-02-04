@@ -1,0 +1,5 @@
+Oil_gas = ['Rosneft', 'Bashneft', 'Lukoil', 'Gazprom', 'Tatneft', 'Novatek']
+Steel = ['NLMK', 'MMK', 'Severstal', 'Mechel']
+Non_ferrous_metals = ['Nornickel', 'Rusal', 'Polymetal']
+Communication = ['Yandex', 'MTS', 'Rostelekom', 'VK', 'T', 'Positive']
+Finance = ['Sber', 'T', 'Moex', 'VTB']
