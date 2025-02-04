@@ -91,6 +91,9 @@ class CatboostFinModel():
     def __call__(self, X_test):
         return self.predict(X_test)
     
+    def predict_proba(self, X_test):
+        return self.model.predict_proba(X_test)
+    
     def get_constant_accuracy(self, y_test, unknown = False):
         val_const = pl.from_pandas(y_test.reset_index())
         consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
