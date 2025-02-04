@@ -39,8 +39,6 @@ def train_data_hp_filter(data, l=10, num_pr=None):
 
     return data_copy
 
-
-# Скейлинг, по идее нельзя особо юзать даже 
 class Scaler(Enum):
     """
     Перечисление для выбора метода скейлинга данных.
@@ -48,23 +46,77 @@ class Scaler(Enum):
     Standard = StandardScaler
     Power = PowerTransformer
 
-def scale_num_data(data, numeric, scaler : Scaler):
-    """
-    Масштабирует числовые признаки данных с использованием заданного скейлера.
-
-    Параметры:
-        data (pd.DataFrame): Исходные данные.
-        numeric (list): Список числовых признаков для масштабирования.
-        scaler (Scaler): Выбранный метод скейлинга из перечисления Scaler.
-
-    Возвращает:
-        pd.DataFrame: Данные с масштабированными числовыми признаками.
-    """
+def scale_num_data(fit_data, tranform_data, numeric, scaler : Scaler):
     scale_model = scaler.value()
-    transformed_data = data.copy()
-    transformed_data[numeric] = scale_model.fit(transformed_data[numeric]).transform(transformed_data[numeric])
-    return transformed_data
+    fitted_scaler = scale_model.fit(fit_data[numeric])
+    res = []
+    for df in tranform_data:
+        transformed_data = df.copy()
+        transformed_data[numeric] = fitted_scaler.transform(transformed_data[numeric])
+        res.append(transformed_data)
+    return res
 
+# def merged_split(data, 
+#                  start_data, 
+#                  num_train_candles, 
+#                  num_valid_candles, 
+#                  target,
+#                  numeric = [], cat = [],
+#                  n_periods = 5, 
+#                  num_test_candles=0):
+    
+#     train_indexes = list(range(num_train_candles))
+#     valid_indexes = list(range(num_train_candles, num_train_candles + num_valid_candles))
+#     train_ind = num_train_candles
+#     # valid_ind = num_valid_candles
+#     for i in range(1, n_periods):
+#         train_ind += num_valid_candles
+#         train_indexes += list(range(train_ind, train_ind + num_train_candles))
+#         train_ind += num_train_candles
+#         valid_indexes += list(range(train_ind, train_ind + num_valid_candles))
+
+#     restr_data = (data[data['utc'] >= start_data]).reset_index()
+#     X_train = restr_data[numeric + cat].iloc[train_indexes]
+#     y_train = restr_data[target].iloc[train_indexes]
+#     X_val = restr_data[numeric + cat].iloc[valid_indexes]
+#     y_val = restr_data[target].iloc[valid_indexes]
+#     return X_train, X_val, y_train, y_val 
+
+def merged_split(data, 
+                 start_data, 
+                 num_train_candles, 
+                 num_valid_candles, 
+                 target,
+                 numeric = [], cat = [],
+                 n_periods = 5, 
+                 num_test_candles=0):
+    
+    train_indexes = list(range(num_train_candles))
+    train_ind = num_train_candles
+    valid_indexes = list(range(train_ind, train_ind + num_valid_candles))
+    train_ind += num_valid_candles
+    test_indexes = list(range(train_ind, train_ind + num_test_candles))
+    train_ind += num_test_candles
+    for _ in range(1, n_periods):
+        train_indexes += list(range(train_ind, train_ind + num_train_candles))
+        train_ind += num_train_candles
+        valid_indexes += list(range(train_ind, train_ind + num_valid_candles))
+        train_ind += num_valid_candles
+        test_indexes += list(range(train_ind, train_ind + num_test_candles))
+        train_ind += num_test_candles
+
+    restr_data = (data[data['utc'] >= start_data]).reset_index()
+    # print(restr_data)
+    X_train = restr_data[numeric + cat].iloc[train_indexes]
+    y_train = restr_data[target].iloc[train_indexes]
+    X_val = restr_data[numeric + cat].iloc[valid_indexes]
+    y_val = restr_data[target].iloc[valid_indexes]
+    if num_train_candles == 0:
+        return X_train, X_val, y_train, y_val 
+    else: 
+        X_test = restr_data[numeric + cat].iloc[test_indexes]
+        y_test = restr_data[target].iloc[test_indexes]
+        return X_train, X_val, X_test, y_train, y_val, y_test
 
 # Трейн-валид разделение 
 def train_valid_split(data, 
