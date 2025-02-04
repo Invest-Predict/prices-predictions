@@ -42,7 +42,8 @@ class TrendFeaturesMixin:
             self.df[f'close_normed_butter_filter_trend_rsi_{i}'] = self.df['close'] / self.df[f'butter_filter_trend_rsi_{i}']
 
             if f'butter_filter_trend_rsi_{i}' not in self.numeric_features:
-                self.numeric_features += [f'butter_filter_trend_rsi_{i}', f'close_normed_butter_filter_trend_rsi_{i}']
+                self.numeric_features += [f'close_normed_butter_filter_trend_rsi_{i}']
+                # self.numeric_features += [f'butter_filter_trend_rsi_{i}', f'close_normed_butter_filter_trend_rsi_{i}']
 
     def insert_trend_rolling_means(self, windows = [3, 6, 18]):
         if 'butter_filter_trend' not in self.df.columns:
@@ -53,7 +54,8 @@ class TrendFeaturesMixin:
             self.df[f'close_normed_butter_filter_trend_ma_{i}'] = self.df['close'] / self.df[f'butter_filter_trend_ma_{i}']
 
             if f'butter_filter_trend_ma_{i}' not in self.numeric_features:
-                self.numeric_features += [f'butter_filter_trend_ma_{i}', f'close_normed_butter_filter_trend_ma_{i}']
+                self.numeric_features += [f'close_normed_butter_filter_trend_ma_{i}']
+                # self.numeric_features += [f'butter_filter_trend_ma_{i}', f'close_normed_butter_filter_trend_ma_{i}']
     
     def insert_trend_deviation(self):
         if 'butter_filter_trend' not in self.df.columns:
@@ -63,4 +65,5 @@ class TrendFeaturesMixin:
         self.df['close_normed_butter_filter_trend_deviation'] = self.df['close'] / self.df['butter_filter_trend_deviation']
 
         if 'butter_filter_trend_deviation' not in self.numeric_features:
-            self.numeric_features += ['butter_filter_trend_deviation', 'close_normed_butter_filter_trend_deviation']
+            self.numeric_features += ['close_normed_butter_filter_trend_deviation']
+            # self.numeric_features += ['butter_filter_trend_deviation', 'close_normed_butter_filter_trend_deviation']
