@@ -353,7 +353,7 @@ class CatboostFinModel():
 
 
             if money >= open_now and y_pred == 1:
-                money += (close_in_ten_min - open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
+                money += (close_in_ten_min - open_now) # купили сейчас за текущую цену open_now и продали через 10 мин за close_in_ten_min
 
                 if print_actions:
                     s_add = ""
