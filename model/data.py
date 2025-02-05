@@ -1,5 +1,4 @@
 import pandas as pd
-import polars as pl
 import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
