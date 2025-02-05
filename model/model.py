@@ -91,6 +91,9 @@ class CatboostFinModel():
     def __call__(self, X_test):
         return self.predict(X_test)
     
+    def predict_proba(self, X_test):
+        return self.model.predict_proba(X_test)
+    
     def get_constant_accuracy(self, y_test, unknown = False):
         val_const = pl.from_pandas(y_test.reset_index())
         consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
@@ -340,8 +343,9 @@ class CatboostFinModel():
         self.fit()
 
         print(self.model.score(X_test, y_test))
-        # history = []
+        history = []
         money = initial_budget
+        history.append(money)
         for i in range(X_test.shape[0] - 1):
             y_pred = self.predict(X_test[num + cat].iloc[i])
             close_in_ten_min = X_test['close'].iloc[i + 1]
@@ -350,14 +354,15 @@ class CatboostFinModel():
 
             if money >= open_now and y_pred == 1:
                 money += (close_in_ten_min - open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
-                # history.append((f"budget: {money}", f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min}"))
 
                 if print_actions:
                     s_add = ""
                     if close_in_ten_min < open_now:
                         s_add = " Daaaaaaaaaamn I was wrong"
                     print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}" + s_add)
+
+            history.append(money)
                         
 
         print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
-        # return history
+        return history, X_test
