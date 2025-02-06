@@ -372,3 +372,49 @@ class CatboostFinModel():
                         
         # print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
         return history
+    
+
+    def test_weekly(self, df, start_dt = dt.datetime(2024, 1, 1), end_dt=dt.datetime(2024, 12, 31), target = 'direction_binary', cat = [], num = []):
+        columns = df.columns
+        train, val, test = pd.DataFrame(columns=columns), pd.DataFrame(columns=columns), pd.DataFrame(columns=columns)
+        df_copy = df[df['utc'] >= start_dt][df['utc'] <= end_dt].copy()
+
+        now_dt = df_copy['utc'].iloc[0]
+        ind = 0
+        while now_dt + dt.timedelta(days=7) < end_dt:
+            next_dt = now_dt + dt.timedelta(days=3)  # for train
+            while now_dt < next_dt:
+                row = df.loc[df['utc'] == now_dt]
+                train = pd.concat([train, row], ignore_index=True)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+            next_dt = now_dt + dt.timedelta(days=1)  # for val
+            while now_dt < next_dt:
+                row = df.loc[df['utc'] == now_dt]
+                val = pd.concat([val, row], ignore_index=True)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+            
+            next_dt = now_dt + dt.timedelta(days=1)  # for test
+            while now_dt < next_dt:
+                row = df.loc[df['utc'] == now_dt]
+                test = pd.concat([test, row], ignore_index=True)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+        
+        X_train, y_train = train.drop(columns=target), train[target]
+        X_val, y_val = val.drop(columns=target), val[target]
+        X_test, y_test = test.drop(columns=target), test[target]
+
+        self.set_datasets(X_train, X_val, y_train, y_val)
+        self.set_features(num, cat)
+
+        self.fit()
+
+        # self.predict(X_test)
+
+        return self.model.score(X_test, y_test)
+
+    
+            
+
