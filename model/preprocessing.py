@@ -71,7 +71,7 @@ def merged_split(data,
     ptr_ind += num_valid_candles
     test_indexes = list(range(ptr_ind, ptr_ind + num_test_candles))
     ptr_ind += num_test_candles
-    
+
     for _ in range(1, n_periods):
         train_indexes += list(range(ptr_ind, ptr_ind + num_train_candles))
         ptr_ind += num_train_candles
@@ -147,38 +147,58 @@ def train_valid_split_stupidly(data,
 
     return X_train, X_val, y_train, y_val
 
+def train_valid_test_split(data, start_period : dt.datetime, train_size, val_size, test_size, numeric, cat, target, silenced = True):
+        
+        cutted_df = data[data["utc"] >= start_period]
+        train_df = cutted_df[:train_size]
+        val_df = cutted_df[train_size : train_size+val_size]
+        test_df = cutted_df[train_size+val_size : train_size+val_size+test_size]
 
-def train_valid_test_split(data, 
-                      test_start_data : dt.datetime, # с точностью до минут указываем начало тестового периода 
-                      numeric, cat, target, 
-                      utc = [], test_ticks = 10, val_ticks = 200): # utc здесь добавлено для optuna 
+        if not silenced:
+            train_sd, val_sd, test_sd = train_df[0]["utc"], val_df[0]["utc"], test_df[0]["utc"]
+            train_ed, val_ed, test_ed = train_df[-1]["utc"], val_df[-1]["utc"], test_df[-1]["utc"]
+            print(f"Начало тренировочного периода: {train_sd}. Конец тренировочного периода: {train_ed} \n \
+                    Начало валидационного периода: {val_sd}. Конец валидационного периода: {val_ed} \n \
+                    Начало тестового периода: {test_sd}. Конец тестового периода: {test_ed} \n ")
+        
+        X_train, y_train = train_df[numeric + cat], train_df[target]
+        X_val, y_val = val_df[numeric + cat], val_df[target]
+        X_test, y_test = test_df[numeric + cat], test_df[target]
+
+        return X_train, X_val, X_test, y_train, y_val, y_test
+
+
+
+# def train_valid_test_split(data, 
+#                       test_start_data : dt.datetime, # с точностью до минут указываем начало тестового периода 
+#                       numeric, cat, target, 
+#                       test_ticks = 10, val_ticks = 200): # utc здесь добавлено для optuna 
     
-    """
-    Делит данные на обучающую, валидационную и тестовую выборки.
+#     """
+#     Делит данные на обучающую, валидационную и тестовую выборки.
 
-    Параметры:
-        data (pd.DataFrame): Исходные данные.
-        test_start_data (datetime): Начало тестового периода.
-        numeric (list): Список числовых признаков.
-        cat (list): Список категориальных признаков.
-        target (str): Целевой столбец.
-        utc (list, optional): Дополнительные временные признаки.
-        test_ticks (int, optional): Количество записей для тестовой выборки.
-        val_ticks (int, optional): Количество записей для валидационной выборки.
+#     Параметры:
+#         data (pd.DataFrame): Исходные данные.
+#         test_start_data (datetime): Начало тестового периода.
+#         numeric (list): Список числовых признаков.
+#         cat (list): Список категориальных признаков.
+#         target (str): Целевой столбец.
+#         test_ticks (int, optional): Количество записей для тестовой выборки.
+#         val_ticks (int, optional): Количество записей для валидационной выборки.
 
-    Возвращает:
-        tuple: Обучающие, валидационные и тестовые признаки и целевые значения.
-    """
-    train_valid_df = data[data["utc"] < test_start_data]
-    train_df = train_valid_df[:train_valid_df.shape[0] - val_ticks]
-    valid_df = train_valid_df[train_valid_df.shape[0] - val_ticks : ]
-    X_train = train_df[numeric + cat + utc]
-    y_train = train_df[target]
-    X_val = valid_df[numeric + cat + utc]
-    y_val = valid_df[target]
+#     Возвращает:
+#         tuple: Обучающие, валидационные и тестовые признаки и целевые значения.
+#     """
+#     train_valid_df = data[data["utc"] < test_start_data]
+#     train_df = train_valid_df[:train_valid_df.shape[0] - val_ticks]
+#     valid_df = train_valid_df[train_valid_df.shape[0] - val_ticks : ]
+#     X_train = train_df[numeric + cat]
+#     y_train = train_df[target]
+#     X_val = valid_df[numeric + cat]
+#     y_val = valid_df[target]
 
-    test_df = data[data["utc"] >=  test_start_data][:test_ticks]
-    X_test = test_df[numeric + cat + utc]
-    y_test = test_df[target]
+#     test_df = data[data["utc"] >=  test_start_data][:test_ticks]
+#     X_test = test_df[numeric + cat]
+#     y_test = test_df[target]
 
-    return X_train, X_val, X_test, y_train, y_val, y_test
+#     return X_train, X_val, X_test, y_train, y_val, y_test

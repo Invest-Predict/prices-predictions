@@ -91,6 +91,9 @@ class CatboostFinModel():
     def __call__(self, X_test):
         return self.predict(X_test)
     
+    def predict_proba(self, X_test):
+        return self.model.predict_proba(X_test)
+    
     def get_constant_accuracy(self, y_test, unknown = False):
         val_const = pl.from_pandas(y_test.reset_index())
         consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
@@ -208,7 +211,7 @@ class CatboostFinModel():
                                                              "l2_leaf_reg" : {"low" : 3, "high" : 500}, 
                                                              "depth" : {"low" : 3, "high" : 6}},
                                                      min_trials_for_pruner = 3, 
-                                                     number_of_trials = 10):
+                                                     number_of_trials = 10, n_warmup_steps=0, verbose=1000):
         """
         Оптимизирует гиперпараметры модели CatBoostClassifier с использованием Optuna.
 
@@ -217,6 +220,8 @@ class CatboostFinModel():
                 значения - словари с "low" и "high" границами значений (по умолчанию содержит learning_rate, l2_leaf_reg и depth).
             min_trials_for_pruner (int): Минимальное количество попыток для активации прунера.
             number_of_trials (int): Количество попыток для Optuna.
+            n_warmup_steps (int): Количество деревьев до того как прунер начнет прунить.
+            verbose (int): Отчет катбуста каждые verbose итераций.
 
         Пример changing_params:
             {
@@ -229,25 +234,30 @@ class CatboostFinModel():
         """
         
         storage = RDBStorage(url="sqlite:///optuna_params_trials.db")
-        pruner = MedianPruner(n_min_trials=min_trials_for_pruner)
+        pruner = MedianPruner(n_warmup_steps=n_warmup_steps, n_min_trials=min_trials_for_pruner)
 
         args = self.args
 
         def objective(trial):
             nonlocal args
-            suggested_learning_rate = trial.suggest_float("learning_rate", 
-                                                          low=changing_params["learning_rate"]["low"], 
-                                                          high=changing_params["learning_rate"]["high"])
+
+            # learning rate
+            if changing_params["learning_rate"] is not None:
+                suggested_learning_rate = trial.suggest_float("learning_rate", 
+                                                            low=changing_params["learning_rate"]["low"], 
+                                                            high=changing_params["learning_rate"]["high"])
+                args["learning_rate"] = suggested_learning_rate
             
+            # regularization
             suggested_l2_leaf_reg = trial.suggest_int("l2_leaf_reg", 
                                                       low=changing_params["l2_leaf_reg"]["low"], 
                                                       high=changing_params["l2_leaf_reg"]["high"])
+            args["l2_leaf_reg"] = suggested_l2_leaf_reg
+
+            # depth
             suggested_depth = trial.suggest_int("depth", 
                                                 low=changing_params["depth"]["low"], 
                                                 high=changing_params["depth"]["high"])
-
-            args["learning_rate"] = suggested_learning_rate
-            args["l2_leaf_reg"] = suggested_l2_leaf_reg
             args["depth"] = suggested_depth
 
             model = CatBoostClassifier(**args)
@@ -259,7 +269,7 @@ class CatboostFinModel():
                 self.y_train, 
                 eval_set=Pool(self.X_val, self.y_val, cat_features=self.cat), 
                 cat_features=self.cat, 
-                verbose=1000,  
+                verbose=verbose,  
                 callbacks=[pruning_callback]
             )
 
@@ -341,6 +351,7 @@ class CatboostFinModel():
         history = pd.DataFrame(columns=["datetime", "budget"])
         history.loc[0] = [X_test['utc'].iloc[0], initial_budget]
         money = initial_budget
+        history.append(money)
         for i in range(X_test.shape[0] - 1):
             y_pred = self.predict(X_test[num + cat].iloc[i])
             close_in_ten_min = X_test['close'].iloc[i + 1]
@@ -350,14 +361,14 @@ class CatboostFinModel():
 
             if money >= open_now and y_pred == 1:
                 money += (close_in_ten_min - open_now) * (money  // open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
-                # history.append((f"budget: {money}", f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min}"))
 
                 if print_actions:
                     s_add = ""
                     if close_in_ten_min < open_now:
                         s_add = " Daaaaaaaaaamn I was wrong"
                     print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}" + s_add)
-                        
 
+            history.append(money)
+                        
         # print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
         return history
