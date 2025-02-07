@@ -79,12 +79,7 @@ def test_average_return(dfs_paths, start_period : dt.datetime, feature_settings 
 
     return {"long-short" : long_short_av_value, "long" : long_av_value, "short" : short_av_value}
 
-def calculate_accuracy_among_period():
-    pass
 
-def test_dynamic_trading(df, target, cat_features, num_features, start_date, test_size, train_size, valid_size, strategy="long-short"):
-    test_df = df["utc"] >= test_start_date
-    pass
 
 
 
