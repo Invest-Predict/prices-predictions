@@ -155,8 +155,8 @@ def train_valid_test_split(data, start_period : dt.datetime, train_size, val_siz
         test_df = cutted_df[train_size+val_size : train_size+val_size+test_size]
 
         if not silenced:
-            train_sd, val_sd, test_sd = train_df[0]["utc"], val_df[0]["utc"], test_df[0]["utc"]
-            train_ed, val_ed, test_ed = train_df[-1]["utc"], val_df[-1]["utc"], test_df[-1]["utc"]
+            train_sd, val_sd, test_sd = train_df["utc"].iloc[0], val_df["utc"].iloc[0], test_df["utc"].iloc[0]
+            train_ed, val_ed, test_ed = train_df["utc"].iloc[-1], val_df["utc"].iloc[-1], test_df["utc"].iloc[-1]
             print(f"Начало тренировочного периода: {train_sd}. Конец тренировочного периода: {train_ed} \n \
                     Начало валидационного периода: {val_sd}. Конец валидационного периода: {val_ed} \n \
                     Начало тестового периода: {test_sd}. Конец тестового периода: {test_ed} \n ")
@@ -166,39 +166,3 @@ def train_valid_test_split(data, start_period : dt.datetime, train_size, val_siz
         X_test, y_test = test_df[numeric + cat], test_df[target]
 
         return X_train, X_val, X_test, y_train, y_val, y_test
-
-
-
-# def train_valid_test_split(data, 
-#                       test_start_data : dt.datetime, # с точностью до минут указываем начало тестового периода 
-#                       numeric, cat, target, 
-#                       test_ticks = 10, val_ticks = 200): # utc здесь добавлено для optuna 
-    
-#     """
-#     Делит данные на обучающую, валидационную и тестовую выборки.
-
-#     Параметры:
-#         data (pd.DataFrame): Исходные данные.
-#         test_start_data (datetime): Начало тестового периода.
-#         numeric (list): Список числовых признаков.
-#         cat (list): Список категориальных признаков.
-#         target (str): Целевой столбец.
-#         test_ticks (int, optional): Количество записей для тестовой выборки.
-#         val_ticks (int, optional): Количество записей для валидационной выборки.
-
-#     Возвращает:
-#         tuple: Обучающие, валидационные и тестовые признаки и целевые значения.
-#     """
-#     train_valid_df = data[data["utc"] < test_start_data]
-#     train_df = train_valid_df[:train_valid_df.shape[0] - val_ticks]
-#     valid_df = train_valid_df[train_valid_df.shape[0] - val_ticks : ]
-#     X_train = train_df[numeric + cat]
-#     y_train = train_df[target]
-#     X_val = valid_df[numeric + cat]
-#     y_val = valid_df[target]
-
-#     test_df = data[data["utc"] >=  test_start_data][:test_ticks]
-#     X_test = test_df[numeric + cat]
-#     y_test = test_df[target]
-
-#     return X_train, X_val, X_test, y_train, y_val, y_test

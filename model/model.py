@@ -122,9 +122,16 @@ class CatboostFinModel():
         for i, imp in enumerate(sorted_importances):
             print(imp, sorted_names[i])
 
-    def restrict_features_by_importance(self):
-        features = self._get_sorted_feature_importances()
-        pass
+    def get_top_imp_features(self, n : int):
+        indexes = np.argsort(self.model.feature_importances_)
+        sorted_importances = self.model.feature_importances_[indexes][-n:]
+        sorted_names = np.array(self.model.feature_names_)[indexes][-n:]
+        for i, imp in enumerate(sorted_importances):
+            print(imp, sorted_names[i])
+        return sorted_names
+
+
+
         
 
     def get_shap_values(self):

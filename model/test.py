@@ -33,14 +33,14 @@ def calculate_avret(matrix_probs : np.array, matrix_tests : np.array, norm_value
     tests_shifted[:, -1] = tests_shifted[:, -2]
     values_max_curr, values_max_next = np.take_along_axis(matrix_tests, idx_max, axis=0), np.take_along_axis(tests_shifted, idx_max, axis=0)
     values_min_curr, values_min_next = np.take_along_axis(matrix_tests, idx_min, axis=0), np.take_along_axis(tests_shifted, idx_min, axis=0)
-    revenue_long = (np.sum(values_max_next/values_max_curr - 1))/norm_value
-    revenue_short = (np.sum(1 - values_min_next/values_min_curr))/norm_value
+    revenue_long = (np.sum(values_max_next/values_max_curr - 1))/(2*norm_value)
+    revenue_short = (np.sum(1 - values_min_next/values_min_curr))/(2*norm_value)
     if type == "long-short":
-        return (revenue_long - revenue_short)/matrix_tests.shape[1]
+        return (revenue_long + revenue_short)/matrix_tests.shape[1]
     if type == "long":
         return (revenue_long)/matrix_tests.shape[1]
     if type == "short":
-        return (-revenue_short)/matrix_tests.shape[1]
+        return (revenue_short)/matrix_tests.shape[1]
     
 def calculate_metric_params(dfs_paths, start_period, feature_settings, args, train_size, val_size, test_size):
     tests = []
@@ -78,6 +78,17 @@ def test_average_return(dfs_paths, start_period : dt.datetime, feature_settings 
     short_av_value = calculate_avret(matrix_probs, matrix_tests, norm_value=x, type="short")
 
     return {"long-short" : long_short_av_value, "long" : long_av_value, "short" : short_av_value}
+
+def calculate_accuracy_among_period():
+    pass
+
+def test_dynamic_trading(df, target, cat_features, num_features, start_date, test_size, train_size, valid_size, strategy="long-short"):
+    test_df = df["utc"] >= test_start_date
+    pass
+
+
+
+
 
 
     
