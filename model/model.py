@@ -218,7 +218,7 @@ class CatboostFinModel():
                                                              "l2_leaf_reg" : {"low" : 3, "high" : 500}, 
                                                              "depth" : {"low" : 3, "high" : 6}},
                                                      min_trials_for_pruner = 3, 
-                                                     number_of_trials = 10):
+                                                     number_of_trials = 10, n_warmup_steps=0, verbose=1000):
         """
         Оптимизирует гиперпараметры модели CatBoostClassifier с использованием Optuna.
 
@@ -227,6 +227,8 @@ class CatboostFinModel():
                 значения - словари с "low" и "high" границами значений (по умолчанию содержит learning_rate, l2_leaf_reg и depth).
             min_trials_for_pruner (int): Минимальное количество попыток для активации прунера.
             number_of_trials (int): Количество попыток для Optuna.
+            n_warmup_steps (int): Количество деревьев до того как прунер начнет прунить.
+            verbose (int): Отчет катбуста каждые verbose итераций.
 
         Пример changing_params:
             {
@@ -239,25 +241,30 @@ class CatboostFinModel():
         """
         
         storage = RDBStorage(url="sqlite:///optuna_params_trials.db")
-        pruner = MedianPruner(n_min_trials=min_trials_for_pruner)
+        pruner = MedianPruner(n_warmup_steps=n_warmup_steps, n_min_trials=min_trials_for_pruner)
 
         args = self.args
 
         def objective(trial):
             nonlocal args
-            suggested_learning_rate = trial.suggest_float("learning_rate", 
-                                                          low=changing_params["learning_rate"]["low"], 
-                                                          high=changing_params["learning_rate"]["high"])
+
+            # learning rate
+            if changing_params["learning_rate"] is not None:
+                suggested_learning_rate = trial.suggest_float("learning_rate", 
+                                                            low=changing_params["learning_rate"]["low"], 
+                                                            high=changing_params["learning_rate"]["high"])
+                args["learning_rate"] = suggested_learning_rate
             
+            # regularization
             suggested_l2_leaf_reg = trial.suggest_int("l2_leaf_reg", 
                                                       low=changing_params["l2_leaf_reg"]["low"], 
                                                       high=changing_params["l2_leaf_reg"]["high"])
+            args["l2_leaf_reg"] = suggested_l2_leaf_reg
+
+            # depth
             suggested_depth = trial.suggest_int("depth", 
                                                 low=changing_params["depth"]["low"], 
                                                 high=changing_params["depth"]["high"])
-
-            args["learning_rate"] = suggested_learning_rate
-            args["l2_leaf_reg"] = suggested_l2_leaf_reg
             args["depth"] = suggested_depth
 
             model = CatBoostClassifier(**args)
@@ -269,7 +276,7 @@ class CatboostFinModel():
                 self.y_train, 
                 eval_set=Pool(self.X_val, self.y_val, cat_features=self.cat), 
                 cat_features=self.cat, 
-                verbose=1000,  
+                verbose=verbose,  
                 callbacks=[pruning_callback]
             )
 
@@ -319,14 +326,16 @@ class CatboostFinModel():
             
         return sum(scores) / n_samples
     
-    def test_trading(self, df, target = 'direction_binary', start_date = None, proportion = [1, 1, 1], train_size=2000, val_size=1000, test_size=1000, 
-                     initial_budget = 10000, cat = [], num = [], print_actions = False):
+    def test_trading(self, df, target = 'direction_binary', start_date = None, end_date = None, proportion = [1, 1, 1], train_size=2000, val_size=1000, test_size=1000, 
+                     initial_budget = 10000, cat = [], num = [], print_actions = False, intra = dict()):
         '''
         Примитиваня стратегия, пусть мы просто пока покупаем акцию сейчас, если предполагаем, что через десять минут она вырастит в цене
         (через 10 минут в этом случае её продаём)
         В ином случае мы ничего не делаем (ждём следущий период)
         Но также у нас есть ограничение - это бюджет (он ограчен => не всегда сможем купить акцию, чтобы продать её через 10 минут)
         '''
+        if end_date is not None:
+            df = df[df["utc"] <= end_date].reset_index().drop(columns=['index'])
         if start_date is not None:
              df = df[df["utc"] >= start_date].reset_index().drop(columns=['index'])
              df_size = df.shape[0]
@@ -337,13 +346,17 @@ class CatboostFinModel():
         X_train, X_val, X_test = X[-(train_size + val_size + test_size):-(val_size + test_size)], X[-(val_size + test_size): -test_size], X[-test_size:]
         y_train, y_val, y_test = y[-(train_size + val_size + test_size):-(val_size + test_size)], y[-(val_size + test_size): -test_size], y[-test_size:]
 
+        if X_val.shape[0] < 1 or X_test.shape[0] < 1:
+            return intra
+
         self.set_datasets(X_train, X_val, y_train, y_val)
         self.set_features(num, cat)
 
         self.fit()
 
-        print(self.model.score(X_test, y_test))
-        history = []
+        print(self.score(X_test, y_test))
+        history = pd.DataFrame(columns=["datetime", "budget"])
+        history.loc[0] = [X_test['utc'].iloc[0], initial_budget]
         money = initial_budget
         history.append(money)
         for i in range(X_test.shape[0] - 1):
@@ -351,9 +364,10 @@ class CatboostFinModel():
             close_in_ten_min = X_test['close'].iloc[i + 1]
             open_now = X_test['close'].iloc[i]
 
+            history.loc[i + 1] = [X_test['utc'].iloc[i + 1], money]
 
             if money >= open_now and y_pred == 1:
-                money += (close_in_ten_min - open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
+                money += (close_in_ten_min - open_now) * (money  // open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
 
                 if print_actions:
                     s_add = ""
@@ -363,6 +377,51 @@ class CatboostFinModel():
 
             history.append(money)
                         
+        # print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
+        return history
+    
 
-        print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
-        return history, X_test
+    def test_weekly(self, df, start_dt = dt.datetime(2024, 1, 1), end_dt=dt.datetime(2024, 12, 31), target = 'direction_binary', cat = [], num = []):
+        columns = df.columns
+        train, val, test = pd.DataFrame(columns=columns), pd.DataFrame(columns=columns), pd.DataFrame(columns=columns)
+        df_copy = df[df['utc'] >= start_dt][df['utc'] <= end_dt].copy()
+
+        now_dt = df_copy['utc'].iloc[0]
+        ind = 0
+        while now_dt + dt.timedelta(days=7) < end_dt:
+            next_dt = now_dt + dt.timedelta(days=3)  # for train
+            while now_dt < next_dt:
+                row = df.loc[df['utc'] == now_dt]
+                train = pd.concat([train, row], ignore_index=True)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+            next_dt = now_dt + dt.timedelta(days=1)  # for val
+            while now_dt < next_dt:
+                row = df.loc[df['utc'] == now_dt]
+                val = pd.concat([val, row], ignore_index=True)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+            
+            next_dt = now_dt + dt.timedelta(days=1)  # for test
+            while now_dt < next_dt:
+                row = df.loc[df['utc'] == now_dt]
+                test = pd.concat([test, row], ignore_index=True)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+        
+        X_train, y_train = train.drop(columns=target), train[target]
+        X_val, y_val = val.drop(columns=target), val[target]
+        X_test, y_test = test.drop(columns=target), test[target]
+
+        self.set_datasets(X_train, X_val, y_train, y_val)
+        self.set_features(num, cat)
+
+        self.fit()
+
+        # self.predict(X_test)
+
+        return self.model.score(X_test, y_test)
+
+    
+            
+
