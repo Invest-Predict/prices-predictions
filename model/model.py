@@ -381,33 +381,35 @@ class CatboostFinModel():
         return history
     
 
-    def test_weekly(self, df, start_dt = dt.datetime(2024, 1, 1), end_dt=dt.datetime(2024, 12, 31), target = 'direction_binary', cat = [], num = []):
+    def test_weekly(self, df, start_dt = dt.datetime(2024, 1, 1), end_dt=dt.datetime(2024, 12, 31), proportion = [15, 2, 3], target = 'direction_binary', cat = [], num = []):
         columns = df.columns
-        train, val, test = pd.DataFrame(columns=columns), pd.DataFrame(columns=columns), pd.DataFrame(columns=columns)
+        # train, val, test = pd.DataFrame(columns=columns), pd.DataFrame(columns=columns), pd.DataFrame(columns=columns)
         df_copy = df[df['utc'] >= start_dt][df['utc'] <= end_dt].copy()
 
         now_dt = df_copy['utc'].iloc[0]
         ind = 0
-        while now_dt + dt.timedelta(days=7) < end_dt:
-            next_dt = now_dt + dt.timedelta(days=3)  # for train
+
+        train_ind, val_ind, test_ind = [], [], []
+        while now_dt + dt.timedelta(days=sum(proportion)) < end_dt:
+            next_dt = now_dt + dt.timedelta(days=proportion[0])  # for train
             while now_dt < next_dt:
-                row = df.loc[df['utc'] == now_dt]
-                train = pd.concat([train, row], ignore_index=True)
+                train_ind.append(ind)
                 ind += 1
                 now_dt = df_copy['utc'].iloc[ind]
-            next_dt = now_dt + dt.timedelta(days=1)  # for val
+            next_dt = now_dt + dt.timedelta(days=proportion[1])  # for val
             while now_dt < next_dt:
-                row = df.loc[df['utc'] == now_dt]
-                val = pd.concat([val, row], ignore_index=True)
+                val_ind.append(ind)
                 ind += 1
                 now_dt = df_copy['utc'].iloc[ind]
             
-            next_dt = now_dt + dt.timedelta(days=1)  # for test
+            next_dt = now_dt + dt.timedelta(days=proportion[2])  # for test
             while now_dt < next_dt:
-                row = df.loc[df['utc'] == now_dt]
-                test = pd.concat([test, row], ignore_index=True)
+                test_ind.append(ind)
                 ind += 1
                 now_dt = df_copy['utc'].iloc[ind]
+        train = df_copy.iloc[train_ind]
+        val = df_copy.iloc[val_ind]
+        test = df_copy.iloc[test_ind]
         
         X_train, y_train = train.drop(columns=target), train[target]
         X_val, y_val = val.drop(columns=target), val[target]
