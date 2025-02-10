@@ -423,6 +423,60 @@ class CatboostFinModel():
         # self.predict(X_test)
 
         return self.model.score(X_test, y_test)
+    
+
+    def test_intersect(self, df, start_dt = dt.datetime(2024, 12, 1), end_dt=dt.datetime(2024, 12, 27), proportion = [15, 2, 3], target = 'direction_binary', cat = [], num = []):
+        # train, val, test = pd.DataFrame(columns=columns), pd.DataFrame(columns=columns), pd.DataFrame(columns=columns)
+        df_copy = df[df['utc'] >= start_dt][df['utc'] <= end_dt].copy()
+
+        # now_dt = df_copy['utc'].iloc[0]
+        prev_dt = df_copy['utc'].iloc[0]
+        prev_ind = 0
+        ind = 0
+
+        accuracy_sum = 0
+        cnt = 0
+
+        train_ind, val_ind, test_ind = [], [], []
+        while prev_dt + dt.timedelta(days=sum(proportion)) <= end_dt:
+            now_dt = prev_dt
+            ind = prev_ind
+            prev_dt += dt.timedelta(days=1)
+            next_dt = now_dt + dt.timedelta(days=proportion[0])  # for train
+            while now_dt < next_dt:
+                train_ind.append(ind)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+                if now_dt == prev_dt:
+                    prev_ind = ind
+            next_dt = now_dt + dt.timedelta(days=proportion[1])  # for val
+            while now_dt < next_dt:
+                val_ind.append(ind)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+            
+            next_dt = now_dt + dt.timedelta(days=proportion[2])  # for test
+            while now_dt < next_dt:
+                test_ind.append(ind)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+
+            train = df_copy.iloc[train_ind]
+            val = df_copy.iloc[val_ind]
+            test = df_copy.iloc[test_ind]
+            
+            X_train, y_train = train.drop(columns=target), train[target]
+            X_val, y_val = val.drop(columns=target), val[target]
+            X_test, y_test = test.drop(columns=target), test[target]
+
+            self.set_datasets(X_train, X_val, y_train, y_val)
+            self.set_features(num, cat)
+
+            self.fit()
+            accuracy_sum += self.model.score(X_test, y_test)
+            cnt += 1
+        
+        return accuracy_sum / cnt
 
     
             
