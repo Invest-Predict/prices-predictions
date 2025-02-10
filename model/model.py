@@ -130,10 +130,6 @@ class CatboostFinModel():
             print(imp, sorted_names[i])
         return sorted_names
 
-
-
-        
-
     def get_shap_values(self):
         """
         Вычисляет значения SHAP для объяснения модели.
@@ -419,6 +415,8 @@ class CatboostFinModel():
         self.set_features(num, cat)
 
         self.fit()
+
+        self.get_top_imp_features(20)
 
         # self.predict(X_test)
 
