@@ -24,7 +24,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
             df (str | pd.Dataframe): Путь к CSV-файлу или pd.Dataframe с данными .
         """
         if isinstance(df, pd.DataFrame):
-            self.df = df
+            self.df = df.copy()
         else:
             self.df = pd.read_csv(df)
 
