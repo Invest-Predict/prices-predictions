@@ -119,3 +119,16 @@ class UncommonFeaturesMixin:
         self.df['target_predict'] = np.exp(s_n)
         if 'target_predict' not in self.numeric_features:
                 self.numeric_features += ['target_predict']
+
+    def insert_angle(self, other_name : str):
+        """
+        Добавляет признак 'angle_{other_name}' - угол между ценой закрытия target-акции и ценой закрытия акции other_name.
+        """
+        self.df[f'angle_{other_name}'] = np.arctan(self.df["close"] - self.df["close"].shift()) - np.arctan(self.df[f"close_{other_name}"] - self.df[f"close_{other_name}"].shift())
+
+
+    def insert_angle_ln(self, other_name : str):
+        """
+        Добавляет признак 'angle_ln_{other_name}' - угол на графике логарифмов, чтобы убрать зависимость от масштаба.
+        """
+        self.df[f'angle_ln_{other_name}'] = np.arctan(np.log(self.df["close"]) - np.log(self.df["close"].shift())) - np.arctan(np.log(self.df[f"close_{other_name}"]) - np.log(self.df[f"close_{other_name}"]).shift())
