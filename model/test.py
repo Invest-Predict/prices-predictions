@@ -27,6 +27,7 @@ def make_features(data : FinData, features_settings : dict):
         data.insert_random_prediction()
 
 def calculate_avret(matrix_probs : np.array, matrix_tests : np.array, norm_value, type):
+    # добавить сюда комиссию 
     idx_max = np.argpartition(matrix_probs, -norm_value, axis=0)[-norm_value:]
     idx_min = np.argpartition(matrix_probs, norm_value, axis=0)[:norm_value]
     tests_shifted = np.roll(matrix_tests, shift=-1, axis=1)
