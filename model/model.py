@@ -11,7 +11,6 @@ from optuna.storages import RDBStorage
 from optuna.integration import CatBoostPruningCallback
 from .data import FinData # это надо нам или не? 
 from sklearn.metrics import accuracy_score, classification_report
-from datasets.categories import Oil_gas, Steel, Non_ferrous_metals, Finance, Communication
 
 # TODO визуализация? предсказаний по матрице 
 # TODO бутстрап 
@@ -324,7 +323,7 @@ class CatboostFinModel():
         return sum(scores) / n_samples
     
     def test_trading(self, df, target = 'direction_binary', start_date = None, end_date = None, proportion = [1, 1, 1], train_size=2000, val_size=1000, test_size=1000, 
-                     initial_budget = 10000, cat = [], num = [], print_actions = False, intra = dict()):
+                     initial_budget = 10000, cat = [], num = [], print_actions = False, intra = dict(), commision = 0.00005, stop_after = 30):
         '''
         Примитиваня стратегия, пусть мы просто пока покупаем акцию сейчас, если предполагаем, что через десять минут она вырастит в цене
         (через 10 минут в этом случае её продаём)
@@ -351,12 +350,14 @@ class CatboostFinModel():
 
         self.fit()
 
-        print(self.score(X_test, y_test))
+        # print(self.score(X_test, y_test))
         history = pd.DataFrame(columns=["datetime", "budget"])
         history.loc[0] = [X_test['utc'].iloc[0], initial_budget]
         money = initial_budget
-        history.append(money)
+        # history.append(money)
         for i in range(X_test.shape[0] - 1):
+            if i > stop_after:
+                break
             y_pred = self.predict(X_test[num + cat].iloc[i])
             close_in_ten_min = X_test['close'].iloc[i + 1]
             open_now = X_test['close'].iloc[i]
@@ -364,7 +365,16 @@ class CatboostFinModel():
             history.loc[i + 1] = [X_test['utc'].iloc[i + 1], money]
 
             if money >= open_now and y_pred == 1:
-                money += (close_in_ten_min - open_now) * (money  // open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
+                money += (close_in_ten_min - open_now - (open_now + close_in_ten_min) * commision) * (money  // open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
+
+                if print_actions:
+                    s_add = ""
+                    if close_in_ten_min < open_now:
+                        s_add = " Daaaaaaaaaamn I was wrong"
+                    print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}" + s_add)
+            
+            elif y_pred == 0:
+                money += (open_now - close_in_ten_min - (open_now + close_in_ten_min) * commision) * (money  // open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
 
                 if print_actions:
                     s_add = ""
@@ -372,9 +382,10 @@ class CatboostFinModel():
                         s_add = " Daaaaaaaaaamn I was wrong"
                     print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}" + s_add)
 
-            history.append(money)
+
+            # history.append(money)
                         
-        # print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
+        print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
         return history
     
 
@@ -477,85 +488,6 @@ class CatboostFinModel():
         
         return accuracy_sum / cnt
 
-    def test_within_category(self, category, start_dt = dt.datetime(2024, 1, 1), end_dt=dt.datetime(2024, 12, 31), proportion = [15, 2, 3]):
-        """
-        Обучает несколько моделей, последовательно выбирая в качестве таргета каждую акцию из категории и заполняя признаками общий датасет.
-        Для target-акции заполняются признаки shifts_norms, high_low_diff, rolling_means и exp_rolling_means с параметрами по умолчанию.
-        Для остальных акций добавляются признаки angle_{other_name} и angle_ln_{other_name}.
-        Тестирует при помощи test_weekly с заданным промежутком.
-
-        Параметры:
-        category (str) - название категории из datasets/categories.py
-        start_dt (datetime) - начало периода
-        end_dt (datetime) - конец периода
-        proportion (list) - деление на train val test
-
-        Возвращает: список названий акций, для которых обучалась модель и проводилось предсказание и список Accuracy на тесте для каждой модели.
-        """
-        target_names = []
-        accuracies = []
-
-        # Каждая акция из категории побывает таргетом
-        for target_name in category:
-            target_names.append(target_name)
-            dfs = []
-            numerics = []
-            cats = []
+    
             
-            for name in category:
-                data = FinData(f"../../datasets/{name}_10_min.csv")
-                data.restrict_time_down(start_dt)
-
-                if name == target_name:
-                    # windows_ma = [2, 3, 5, 7, 9, 18, 21, 28, 30, 50, 500]
-                    # data.insert_time_features()
-                    data.insert_rolling_means(windows_ma=[3,6,18])
-                    data.insert_shifts_norms()
-                    data.insert_exp_rolling_means()
-                    data.insert_high_low_diff()
-                    data.make_binary_class_target(target_name="direction_binary")
-
-                data.df.set_index('utc', inplace=True)
-
-                if name != target_name:
-                    data.df.rename({feature: feature + '_' + name for feature in data.df.columns}, axis=1, inplace=True)
-                    data.numeric_features = [feature + '_' + name for feature in data.numeric_features]
-                    data.cat_features = [feature + '_' + name for feature in data.cat_features]
-
-                dfs.append(data.df)
-                numerics += data.numeric_features
-                cats += data.cat_features
-
-            joint_data = FinData(pd.concat(dfs, axis=1).reset_index())
-
-            # добавляем углы 
-            for name in category:
-                if name != target_name:
-                    joint_data.insert_angle(name)
-                    joint_data.insert_angle_ln(name)
-                    numerics += [f'angle_{name}', f'angle_ln_{name}']
-
-            joint_data.numeric_features = numerics
-            joint_data.cat_features = cats
-
-            numeric = joint_data.get_numeric_features()
-            cat = joint_data.get_cat_features()
-
-            # Аргументы для моделей
-            args = {"iterations" : 5000, 
-            "depth" : 6, 
-            "use_best_model" : True, 
-            "verbose" : False,
-            "l2_leaf_reg" : 350,
-            "loss_function" : 'Logloss', 
-            "eval_metric" : 'Accuracy', 
-            "cat_features" : cat, 
-            "random_state" : 42,
-            "early_stopping_rounds" : 1000}
-                            
-            model = CatboostFinModel(args=args)
-
-            test_accuracy = model.test_weekly(df=joint_data.df, start_dt=start_dt, end_dt=end_dt, proportion=proportion, cat=cat, num=numeric)
-            accuracies.append(test_accuracy)
-        return target_names, accuracies
 
