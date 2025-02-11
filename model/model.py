@@ -321,9 +321,10 @@ class CatboostFinModel():
         print(f"Array of scores: {scores}")
             
         return sum(scores) / n_samples
-    
-    def test_trading(self, df, target = 'direction_binary', start_date = None, end_date = None, proportion = [1, 1, 1], train_size=2000, val_size=1000, test_size=1000, 
-                     initial_budget = 10000, cat = [], num = [], print_actions = False, intra = dict(), commision = 0.00005, stop_after = 30):
+
+    def test_trading(self, df, target = 'direction_binary', start_date = None, end_date = None, proportion = [1, 1, 1],
+                     test_st_dt = None, test_end_dt = None, 
+                     initial_budget = 10000, cat = [], num = [], print_actions = False, commision = 0.0001):
         '''
         Примитиваня стратегия, пусть мы просто пока покупаем акцию сейчас, если предполагаем, что через десять минут она вырастит в цене
         (через 10 минут в этом случае её продаём)
@@ -337,27 +338,26 @@ class CatboostFinModel():
              df_size = df.shape[0]
              train_size, val_size = int(df_size * (proportion[0] / sum(proportion))), int(df_size * (proportion[1] / sum(proportion)))
              test_size = df_size - train_size - val_size
+    
         X, y = df.drop(columns=target), df[target]
 
         X_train, X_val, X_test = X[-(train_size + val_size + test_size):-(val_size + test_size)], X[-(val_size + test_size): -test_size], X[-test_size:]
+        X_train, X_val = X_train[num + cat], X_val[num + cat]
         y_train, y_val, y_test = y[-(train_size + val_size + test_size):-(val_size + test_size)], y[-(val_size + test_size): -test_size], y[-test_size:]
 
-        if X_val.shape[0] < 1 or X_test.shape[0] < 1:
-            return intra
+        if test_st_dt is not None:
+            test_df = df = df[df["utc"] <= test_end_dt][df["utc"] >= test_st_dt].reset_index().drop(columns=['index'])
+            X_test, y_test = test_df.drop(columns=target), test_df[target]
 
         self.set_datasets(X_train, X_val, y_train, y_val)
         self.set_features(num, cat)
 
         self.fit()
 
-        # print(self.score(X_test, y_test))
         history = pd.DataFrame(columns=["datetime", "budget"])
         history.loc[0] = [X_test['utc'].iloc[0], initial_budget]
         money = initial_budget
-        # history.append(money)
         for i in range(X_test.shape[0] - 1):
-            if i > stop_after:
-                break
             y_pred = self.predict(X_test[num + cat].iloc[i])
             close_in_ten_min = X_test['close'].iloc[i + 1]
             open_now = X_test['close'].iloc[i]
@@ -374,7 +374,7 @@ class CatboostFinModel():
                     print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}" + s_add)
             
             elif y_pred == 0:
-                money += (open_now - close_in_ten_min - (open_now + close_in_ten_min) * commision) * (money  // open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
+                money += (open_now - close_in_ten_min - (open_now + close_in_ten_min) * commision) * (money  // open_now)  # купили сейчас за текущую цену open_now и продали через 10 мин за close_in_ten_min
 
                 if print_actions:
                     s_add = ""
@@ -382,8 +382,8 @@ class CatboostFinModel():
                         s_add = " Daaaaaaaaaamn I was wrong"
                     print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}" + s_add)
 
-
-            # history.append(money)
+            if y_pred == 0:
+                money += (open_now - close_in_ten_min) * (money // open_now) # продали за цену open_now и купили через 10 минут за close_in_ten_min
                         
         print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
         return history

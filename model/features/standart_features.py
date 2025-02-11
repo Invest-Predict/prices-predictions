@@ -17,7 +17,7 @@ class StandartFeaturesMixin:
         """
         for i in windows_shifts_norms:
             self.df[f'close_norms_{i}'] = self.df['close']/self.df['close'].shift(i)
-            self.df[f'close_high_norms_{i}'] = self.df['close']/self.df['close'].shift(i)
+            self.df[f'close_high_norms_{i}'] = self.df['close']/self.df['high'].shift(i)
             self.df[f'high_norms_{i}'] = self.df['high']/self.df['high'].shift(i)
             self.df[f'low_norms_{i}'] = self.df['low']/self.df['low'].shift(i)
 
