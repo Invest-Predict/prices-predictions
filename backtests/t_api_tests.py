@@ -4,9 +4,9 @@ from tinkoff.invest.utils import now
 from tinkoff.invest import CandleInterval
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from model import FinData
-from model import CatboostFinModel
-from model import train_valid_split_candles
+# from model import FinData
+# from model import CatboostFinModel
+# from model import train_valid_split_candles
 import pandas as pd
 import time
 import logging
@@ -14,6 +14,13 @@ from uuid import uuid4
 import time
 import pandas as pd
 import os
+
+import sys
+sys.path.append('..')
+
+from model import FinData
+from model import CatboostFinModel
+from model import train_valid_split_candles
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,7 +51,7 @@ def wait_until_next_x1_multiple(x = 10):
         next_time += timedelta(hours=1)
 
     wait_seconds = (next_time - now).total_seconds()
-    print(f"Ждем {wait_seconds:.2f} секунд до {next_time.strftime('%H:%M:%S')}...")
+    logging.info(f"Ждем {wait_seconds:.2f} секунд до {next_time.strftime('%H:%M:%S')}...")
     time.sleep(wait_seconds)
 
 def make_features(data : FinData, features_settings : dict):
@@ -97,19 +104,28 @@ async def find_instrument(query : str):
         response = await client.instruments.find_instrument(query=query)
     return response.instruments
 
-async def get_candles(figi : str, start_date : datetime | None, last_candle = False):
+async def get_candles(figi : str, start_date : datetime | None = None, last_candle : bool = False):
     async with AsyncSandboxClient(TOKEN) as client:
         td = datetime.now() - start_date if not last_candle else timedelta(minutes=10)
-        candles = await client.get_all_candles(instrument_id=figi,
-                                            from_=now() - td,
-                                            interval=CandleInterval.CANDLE_INTERVAL_10_MIN,
-                                            candle_source_type=CandleSource.CANDLE_SOURCE_UNSPECIFIED)
+
+        candles = [candle async for candle in client.get_all_candles(
+                                                                        instrument_id=figi,
+                                                                        from_=now() - td,
+                                                                        interval=CandleInterval.CANDLE_INTERVAL_10_MIN,
+                                                                        candle_source_type=CandleSource.CANDLE_SOURCE_UNSPECIFIED
+                                                                    )]
+
+        # candles = await client.get_all_candles(instrument_id=figi,
+        #                                     from_=now() - td,
+        #                                     interval=CandleInterval.CANDLE_INTERVAL_10_MIN,
+        #                                     candle_source_type=CandleSource.CANDLE_SOURCE_UNSPECIFIED)
         
     candles = pd.DataFrame(candles)
     candles = candles if not last_candle else candles.iloc[0].to_frame().T
-    candles = candles.rename({'time': 'utc'})
+    candles = candles.rename(columns={'time': 'utc'})
     for col in ['open', 'high', 'low', 'close']:
                 candles[col] = candles[col].apply(convert_price)
+    logging.info(candles)
 
     return candles 
 
@@ -132,15 +148,15 @@ async def make_data_for_trading(share_id, start_date, features_sets):
     clear_data_df = candles[:-1]
     data = FinData(clear_data_df)
     make_features(data, features_sets)
+    logging.info(f"Собрано {data.df.shape[0]} свечей")
     logging.info("Данные успешно загружены и обработаны")
-    logging.info(clear_data_df.columns)
     return clear_data_df, data, data.get_numeric_features(), data.get_cat_features(), data.target
 
-async def model_train(data, num, cat, target, args):
+async def model_train(data, num, cat, target, args, train_size, val_size):
     logging.info("Начало обучения модели")
     X_train, X_val, y_train, y_val = train_valid_split_candles(data.df, 
-                                                               train_size=3000, 
-                                                               val_size=500, 
+                                                               train_size=train_size, 
+                                                               val_size=val_size, 
                                                                numeric=num, 
                                                                cat=cat, 
                                                                target=target)
@@ -162,7 +178,7 @@ async def make_trading(model, clear_data_df : pd.DataFrame,
     
     logging.info("Запуск торгов в песочнице")
     acc_id, resp = await open_account(name=acc_name, money_value=money)
-    logging.info(f"Создан аккаунт {acc_id}, пополнен на {convert_price(money)}")    
+    logging.info(f"Создан аккаунт {acc_id}, пополнен на {money}")    
     portfolio_shares = []
     logging.info(f"Торги начинаются: {datetime.now()} / Завершение: {end_datetime}")
     while datetime.now() < end_datetime:
@@ -214,12 +230,12 @@ async def make_trading(model, clear_data_df : pd.DataFrame,
             logging.info(f"Продана акция: {response}")
     return acc_id
 
-async def trade(figi, lot,  args, start_date, features_sets, end_date, close_acc = False, 
+async def trade(figi, lot,  args, start_date, end_date, features_sets, train_size, val_size, close_acc = False, 
                 acc_name = "lerochka", money = MoneyValue(currency="643", units=10000, nano=0)):
     
     clear_data_df, data, num, cat, target = await make_data_for_trading(figi, start_date, features_sets)
 
-    model = await model_train(data, num, cat, target, args)
+    model = await model_train(data, num, cat, target, args, train_size, val_size)
 
     acc_id = await make_trading(model, clear_data_df, end_date, lot, figi, features_sets, acc_name, money)  
 
@@ -231,7 +247,7 @@ async def trade(figi, lot,  args, start_date, features_sets, end_date, close_acc
     logging.info(f"Торги завершены с окончательной суммой {portfolio.total_amount_currencies}")
     if close_acc:
         logging.info("Аккаунт закрыт")
-        
+
     return portfolio
      
 
