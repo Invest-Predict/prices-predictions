@@ -49,6 +49,16 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
         self.target = [target_name]
 
+    def make_long_strat_target(self, target_name, commission):
+        self.df["vol_up"] = (self.df['close'].shift(-1) - self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
+        self.df[target_name] = self.df[target_name] = np.where(self.df["vol_up"] > commission * 2, 1, 0)
+
+
+    def make_short_strat_target(self, target_name, commission):
+        self.df["vol_down"] = (- self.df['close'].shift(-1) + self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
+        self.df[target_name] = (self.df["vol_down"] > commission*2).astype('int')
+
+
     def get_numeric_features(self):
         """
         Возвращает список добавленных к текущему моменту числовых признаков.

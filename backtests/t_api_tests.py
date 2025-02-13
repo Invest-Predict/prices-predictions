@@ -37,8 +37,8 @@ ttoken = os.getenv("T_TOKEN")
 TOKEN = ttoken
 
 # вспомогательные функции для работы торгов 
-def convert_price(value):
-    return value['units'] + value['nano'] / 1e9
+def convert_price(value : dict | MoneyValue):
+    return value['units'] + value['nano'] / 1e9 if type(value) == dict else value.units + value.nano / 1e9
 
 def wait_until_next_x1_multiple(x = 10):
     """Ждет до ближайшей минуты, которая кратна x."""
@@ -80,6 +80,13 @@ async def get_accounts():
     async with AsyncSandboxClient(TOKEN) as client:
         return (await client.users.get_accounts()).accounts
     
+async def get_money_on_acc(acc_id):
+    async with AsyncSandboxClient(TOKEN) as client:
+        portfolio = await client.operations.get_portfolio(account_id=acc_id)
+    return convert_price(portfolio.total_amount_currencies)
+    
+
+    
 async def open_account(name : str, money_value = MoneyValue(currency="643", units=10000, nano=0)):
 # создает аккаунт и пополняет его на указанную сумму денег
 # торги в песочнице происходят только в рублях, код рубля "643"
@@ -115,17 +122,11 @@ async def get_candles(figi : str, start_date : datetime | None = None, last_cand
                                                                         candle_source_type=CandleSource.CANDLE_SOURCE_UNSPECIFIED
                                                                     )]
 
-        # candles = await client.get_all_candles(instrument_id=figi,
-        #                                     from_=now() - td,
-        #                                     interval=CandleInterval.CANDLE_INTERVAL_10_MIN,
-        #                                     candle_source_type=CandleSource.CANDLE_SOURCE_UNSPECIFIED)
-        
     candles = pd.DataFrame(candles)
     candles = candles if not last_candle else candles.iloc[0].to_frame().T
     candles = candles.rename(columns={'time': 'utc'})
     for col in ['open', 'high', 'low', 'close']:
                 candles[col] = candles[col].apply(convert_price)
-    logging.info(candles)
 
     return candles 
 
@@ -178,7 +179,7 @@ async def make_trading(model, clear_data_df : pd.DataFrame,
     
     logging.info("Запуск торгов в песочнице")
     acc_id, resp = await open_account(name=acc_name, money_value=money)
-    logging.info(f"Создан аккаунт {acc_id}, пополнен на {money}")    
+    logging.info(f"Создан аккаунт {acc_id}, пополнен на {convert_price(money)}")    
     portfolio_shares = []
     logging.info(f"Торги начинаются: {datetime.now()} / Завершение: {end_datetime}")
     while datetime.now() < end_datetime:
@@ -200,7 +201,9 @@ async def make_trading(model, clear_data_df : pd.DataFrame,
                                             acc_id = acc_id)
                 
                 logging.info(f"Куплена акция: {response}")
+
             
+        logging.info(await get_money_on_acc(acc_id))
         portfolio_shares.clear()
         time.sleep(0.1) # вот тут вопросик по задержкам поступления информации про свечу 
         curr_candle = await get_candles(figi = figi, last_candle=True)
@@ -213,20 +216,23 @@ async def make_trading(model, clear_data_df : pd.DataFrame,
         x_curr = data.df.tail(1)[num + cat]
         y_pred = model.predict(x_curr)  
         logging.info(f"Предсказание модели: {y_pred}")
+        money_am = await get_money_on_acc(acc_id)
+        inst_am = int(money_am // data.df.tail(1).close.item())
         if y_pred == 1:
+            
             response = await make_order(order_dir=OrderDirection.ORDER_DIRECTION_BUY, 
                                         figi = figi, 
-                                        lot = lot, 
+                                        lot = inst_am, 
                                         acc_id = acc_id)
-            portfolio_shares.append({"inst_id" : figi, "quant" : lot, "dur" : "buy"})
+            portfolio_shares.append({"inst_id" : figi, "quant" : inst_am, "dur" : "buy"})
             logging.info(f"Куплена акция: {response}")
 
         if y_pred == 0:
             response = await make_order(order_dir=OrderDirection.ORDER_DIRECTION_SELL, 
                                         figi = figi, 
-                                        lot = lot, 
+                                        lot = inst_am, 
                                         acc_id = acc_id)
-            portfolio_shares.append({"inst_id" : figi, "quant" : lot, "dur" : "buy"})
+            portfolio_shares.append({"inst_id" : figi, "quant" : inst_am, "dur" : "sell"})
             logging.info(f"Продана акция: {response}")
     return acc_id
 
