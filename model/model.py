@@ -334,7 +334,7 @@ class CatboostFinModel():
             
         return sum(scores) / n_samples
 
-    def test_trading(self, df, target = 'direction_binary', start_date = None, end_date = None, proportion = [1, 1, 1],
+    def test_trading(self, df, target = 'direction_binary', start_date = None, end_date = None, proportion = [3, 1, 1],
                     test_st_dt = None, test_end_dt = None, 
                     initial_budget = 10000, cat = [], num = [], print_actions = False, commision = 0.0001):
         '''
@@ -353,7 +353,7 @@ class CatboostFinModel():
                 train_size, val_size = int(df_size * (proportion[0] / sum(proportion))), int(df_size * (proportion[1] / sum(proportion)))
                 test_size = df_size - train_size - val_size
 
-        X, y = df_copy.drop(columns=target), df[target]
+        X, y = df_copy.drop(columns=target), df_copy[target]
 
         X_train, X_val, X_test = X[-(train_size + val_size + test_size):-(val_size + test_size)], X[-(val_size + test_size): -test_size], X[-test_size:]
         # X_train, X_val = X_train[num + cat], X_val[num + cat]
@@ -376,8 +376,6 @@ class CatboostFinModel():
         history.loc[0] = [X_test['utc'].iloc[0], initial_budget]
         money = initial_budget
 
-        # logging.info("Backtesting started")
-        # logging.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
 
         for i in range(X_test.shape[0] - 1):
             y_pred = self.predict(X_test[num + cat].iloc[i])
@@ -387,35 +385,26 @@ class CatboostFinModel():
             history.loc[i + 1] = [X_test['utc'].iloc[i + 1], money]
 
             if money >= open_now and y_pred == 1:
-                money += (close_in_ten_min - open_now - (open_now + close_in_ten_min) * commision) * (money  // open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
+                commission_now = int(((open_now + close_in_ten_min) * commision) * (money  // open_now))
+                money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
+                # money += (close_in_ten_min - open_now - int((open_now + close_in_ten_min) * commision)) * (money  // open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
 
-                logging.info(f"LONG! - Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}")
-
-                # if print_actions:
-                #     s_add = ""
-                #     if close_in_ten_min < open_now:
-                #         s_add = " Daaaaaaaaaamn I was wrong"
-                #     print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}" + s_add)
-            
+                logging.info(f"LONG! - Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
             elif y_pred == 0:
-                money += (open_now - close_in_ten_min - (open_now + close_in_ten_min) * commision) * (money  // open_now)  # купили сейчас за текущую цену open_now и продали через 10 мин за close_in_ten_min
+                commission_now = int(((open_now + close_in_ten_min) * commision) * (money // close_in_ten_min))
+                money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
+                # money += (open_now - close_in_ten_min - int((open_now + close_in_ten_min) * commision)) * (money  // close_in_ten_min)  # купили сейчас за текущую цену open_now и продали через 10 мин за close_in_ten_min
 
-                logging.info(f"SHORT! - Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}")
+                logging.info(f"SHORT! - Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
 
 
-                # if print_actions:
-                #     s_add = ""
-                #     if close_in_ten_min < open_now:
-                #         s_add = " Daaaaaaaaaamn I was wrong"
-                #     print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}" + s_add)
-
-            if y_pred == 0:
-                money += (open_now - close_in_ten_min) * (money // open_now) # продали за цену open_now и купили через 10 минут за close_in_ten_min
+            # if y_pred == 0:
+            #     money += (open_now - close_in_ten_min) * (money // open_now) # продали за цену open_now и купили через 10 минут за close_in_ten_min
                         
         print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
         logging.info(f"\n\n\nMy budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
 
-        return history
+        return money - initial_budget
 
 
     def test_weekly(self, df, start_dt = dt.datetime(2024, 1, 1), end_dt=dt.datetime(2024, 12, 31), proportion = [15, 2, 3], target = 'direction_binary', cat = [], num = []):
