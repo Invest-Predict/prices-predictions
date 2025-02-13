@@ -106,11 +106,11 @@ class CatboostFinModel():
     def predict_proba(self, X_test):
         return self.model.predict_proba(X_test)
     
-    def get_constant_accuracy(self, y_test, unknown = False):
+    def get_constant_accuracy(self, y_test, unknown = False, target_name = "direction_binary"):
         val_const = pl.from_pandas(y_test.reset_index())
-        consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
-        zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
-        ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
+        consts = val_const.group_by(pl.col(target_name)).agg(pl.col("index").count())
+        zeroes = consts.filter(pl.col(target_name) == 0)['index'].item()
+        ones = consts.filter(pl.col(target_name) == 1)['index'].item()
         return max(zeroes, ones)/(ones + zeroes) if not unknown else zeroes/(ones + zeroes)
 
     def score(self, X_scored, y_scored, output_dict=False):
