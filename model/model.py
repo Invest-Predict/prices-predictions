@@ -11,7 +11,18 @@ from optuna.storages import RDBStorage
 from optuna.integration import CatBoostPruningCallback
 from .data import FinData # это надо нам или не? 
 from sklearn.metrics import accuracy_score, classification_report
-from datasets.categories import Oil_gas, Steel, Non_ferrous_metals, Finance, Communication
+import logging
+
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("testing.log"),
+        logging.StreamHandler()
+    ]
+)
 
 # TODO визуализация? предсказаний по матрице 
 # TODO бутстрап 
@@ -95,11 +106,11 @@ class CatboostFinModel():
     def predict_proba(self, X_test):
         return self.model.predict_proba(X_test)
     
-    def get_constant_accuracy(self, y_test, unknown = False):
+    def get_constant_accuracy(self, y_test, unknown = False, target_name = "direction_binary"):
         val_const = pl.from_pandas(y_test.reset_index())
-        consts = val_const.group_by(pl.col("direction_binary")).agg(pl.col("index").count())
-        zeroes = consts.filter(pl.col("direction_binary") == 0)['index'].item()
-        ones = consts.filter(pl.col("direction_binary") == 1)['index'].item()
+        consts = val_const.group_by(pl.col(target_name)).agg(pl.col("index").count())
+        zeroes = consts.filter(pl.col(target_name) == 0)['index'].item()
+        ones = consts.filter(pl.col(target_name) == 1)['index'].item()
         return max(zeroes, ones)/(ones + zeroes) if not unknown else zeroes/(ones + zeroes)
 
     def score(self, X_scored, y_scored, output_dict=False):
@@ -130,10 +141,6 @@ class CatboostFinModel():
         for i, imp in enumerate(sorted_importances):
             print(imp, sorted_names[i])
         return sorted_names
-
-
-
-        
 
     def get_shap_values(self):
         """
@@ -326,40 +333,50 @@ class CatboostFinModel():
         print(f"Array of scores: {scores}")
             
         return sum(scores) / n_samples
-    
-    def test_trading(self, df, target = 'direction_binary', start_date = None, end_date = None, proportion = [1, 1, 1], train_size=2000, val_size=1000, test_size=1000, 
-                     initial_budget = 10000, cat = [], num = [], print_actions = False, intra = dict()):
+
+    def test_trading(self, df = None, target = 'direction_binary', start_date = None, end_date = None, proportion = [3, 1, 1],
+                    train_df = None, val_df = None, test_df = None,
+                    initial_budget = 10000, cat = [], num = [], commision = 0.0001):
         '''
         Примитиваня стратегия, пусть мы просто пока покупаем акцию сейчас, если предполагаем, что через десять минут она вырастит в цене
         (через 10 минут в этом случае её продаём)
-        В ином случае мы ничего не делаем (ждём следущий период)
+        В ином случае мы ничего не делаем (ждём следующий период)
         Но также у нас есть ограничение - это бюджет (он ограчен => не всегда сможем купить акцию, чтобы продать её через 10 минут)
         '''
-        if end_date is not None:
-            df = df[df["utc"] <= end_date].reset_index().drop(columns=['index'])
-        if start_date is not None:
-             df = df[df["utc"] >= start_date].reset_index().drop(columns=['index'])
-             df_size = df.shape[0]
-             train_size, val_size = int(df_size * (proportion[0] / sum(proportion))), int(df_size * (proportion[1] / sum(proportion)))
-             test_size = df_size - train_size - val_size
-        X, y = df.drop(columns=target), df[target]
 
-        X_train, X_val, X_test = X[-(train_size + val_size + test_size):-(val_size + test_size)], X[-(val_size + test_size): -test_size], X[-test_size:]
-        y_train, y_val, y_test = y[-(train_size + val_size + test_size):-(val_size + test_size)], y[-(val_size + test_size): -test_size], y[-test_size:]
+        if train_df is None or val_df is None or test_df is None:
+            train_size, val_size, test_size = 1000, 180, 180
+            if end_date is not None:
+                df_copy = df[df["utc"] <= end_date].reset_index().drop(columns=['index'])
+            if start_date is not None:
+                    df_copy = df_copy[df_copy["utc"] >= start_date].reset_index().drop(columns=['index'])
+                    df_size = df_copy.shape[0]
+                    train_size, val_size = int(df_size * (proportion[0] / sum(proportion))), int(df_size * (proportion[1] / sum(proportion)))
+                    test_size = df_size - train_size - val_size
 
-        if X_val.shape[0] < 1 or X_test.shape[0] < 1:
-            return intra
+            X, y = df_copy.drop(columns=target), df_copy[target]
 
+            X_train, X_val, X_test = X[-(train_size + val_size + test_size):-(val_size + test_size)], X[-(val_size + test_size): -test_size], X[-test_size:]
+            y_train, y_val, y_test = y[-(train_size + val_size + test_size):-(val_size + test_size)], y[-(val_size + test_size): -test_size], y[-test_size:]
+        
+        else:
+            X_train, X_val, X_test = train_df.drop(columns=target), val_df.drop(columns=target), test_df.drop(columns=target)
+            y_train, y_val, y_test = train_df[target], val_df[target], test_df[target]
+        
+        logging.info("Backtesting started")
+        logging.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
+
+        X_train, X_val = X_train[num + cat], X_val[num + cat]
         self.set_datasets(X_train, X_val, y_train, y_val)
         self.set_features(num, cat)
 
         self.fit()
 
-        print(self.score(X_test, y_test))
         history = pd.DataFrame(columns=["datetime", "budget"])
         history.loc[0] = [X_test['utc'].iloc[0], initial_budget]
         money = initial_budget
-        history.append(money)
+
+
         for i in range(X_test.shape[0] - 1):
             y_pred = self.predict(X_test[num + cat].iloc[i])
             close_in_ten_min = X_test['close'].iloc[i + 1]
@@ -368,19 +385,19 @@ class CatboostFinModel():
             history.loc[i + 1] = [X_test['utc'].iloc[i + 1], money]
 
             if money >= open_now and y_pred == 1:
-                money += (close_in_ten_min - open_now) * (money  // open_now) # продали за цену open_now и купили через 10 мин за close_in_ten_min
+                commission_now = ((open_now + close_in_ten_min) * commision) * (money  // open_now)
+                money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
-                if print_actions:
-                    s_add = ""
-                    if close_in_ten_min < open_now:
-                        s_add = " Daaaaaaaaaamn I was wrong"
-                    print(f"Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} -> budget: {money}" + s_add)
+                logging.info(f"LONG! - Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
+            elif y_pred == 0:
+                commission_now = ((open_now + close_in_ten_min) * commision) * (money // close_in_ten_min)
+                money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
+                logging.info(f"SHORT! - Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
 
-            history.append(money)
-                        
-        # print(f"My budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
-        return history
-    
+        logging.info(f"\n\n\nMy budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
+
+        return money - initial_budget # ны выходе прибыль
+
 
     def test_weekly(self, df, start_dt = dt.datetime(2024, 1, 1), end_dt=dt.datetime(2024, 12, 31), proportion = [15, 2, 3], target = 'direction_binary', cat = [], num = []):
         columns = df.columns
@@ -421,89 +438,62 @@ class CatboostFinModel():
 
         self.fit()
 
+        self.get_top_imp_features(20)
+
         # self.predict(X_test)
 
         return self.model.score(X_test, y_test)
 
-    def test_within_category(self, category, start_dt = dt.datetime(2024, 1, 1), end_dt=dt.datetime(2024, 12, 31), proportion = [15, 2, 3]):
-        """
-        Обучает несколько моделей, последовательно выбирая в качестве таргета каждую акцию из категории и заполняя признаками общий датасет.
-        Для target-акции заполняются признаки shifts_norms, high_low_diff, rolling_means и exp_rolling_means с параметрами по умолчанию.
-        Для остальных акций добавляются признаки angle_{other_name} и angle_ln_{other_name}.
-        Тестирует при помощи test_weekly с заданным промежутком.
 
-        Параметры:
-        category (str) - название категории из datasets/categories.py
-        start_dt (datetime) - начало периода
-        end_dt (datetime) - конец периода
-        proportion (list) - деление на train val test
+    def test_intersect(self, df, start_dt = dt.datetime(2024, 12, 1), end_dt=dt.datetime(2024, 12, 27), proportion = [15, 2, 3], target = 'direction_binary', cat = [], num = []):
+        # train, val, test = pd.DataFrame(columns=columns), pd.DataFrame(columns=columns), pd.DataFrame(columns=columns)
+        df_copy = df[df['utc'] >= start_dt][df['utc'] <= end_dt].copy()
 
-        Возвращает: список названий акций, для которых обучалась модель и проводилось предсказание и список Accuracy на тесте для каждой модели.
-        """
-        target_names = []
-        accuracies = []
+        # now_dt = df_copy['utc'].iloc[0]
+        prev_dt = df_copy['utc'].iloc[0]
+        prev_ind = 0
+        ind = 0
 
-        # Каждая акция из категории побывает таргетом
-        for target_name in category:
-            target_names.append(target_name)
-            dfs = []
-            numerics = []
-            cats = []
+        accuracy_sum = 0
+        cnt = 0
+
+        train_ind, val_ind, test_ind = [], [], []
+        while prev_dt + dt.timedelta(days=sum(proportion)) <= end_dt:
+            now_dt = prev_dt
+            ind = prev_ind
+            prev_dt += dt.timedelta(days=1)
+            next_dt = now_dt + dt.timedelta(days=proportion[0])  # for train
+            while now_dt < next_dt:
+                train_ind.append(ind)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
+                if now_dt == prev_dt:
+                    prev_ind = ind
+            next_dt = now_dt + dt.timedelta(days=proportion[1])  # for val
+            while now_dt < next_dt:
+                val_ind.append(ind)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
             
-            for name in category:
-                data = FinData(f"../../datasets/{name}_10_min.csv")
-                data.restrict_time_down(start_dt)
+            next_dt = now_dt + dt.timedelta(days=proportion[2])  # for test
+            while now_dt < next_dt:
+                test_ind.append(ind)
+                ind += 1
+                now_dt = df_copy['utc'].iloc[ind]
 
-                if name == target_name:
-                    # windows_ma = [2, 3, 5, 7, 9, 18, 21, 28, 30, 50, 500]
-                    # data.insert_time_features()
-                    data.insert_rolling_means(windows_ma=[3,6,18])
-                    data.insert_shifts_norms()
-                    data.insert_exp_rolling_means()
-                    data.insert_high_low_diff()
-                    data.make_binary_class_target(target_name="direction_binary")
+            train = df_copy.iloc[train_ind]
+            val = df_copy.iloc[val_ind]
+            test = df_copy.iloc[test_ind]
+            
+            X_train, y_train = train.drop(columns=target), train[target]
+            X_val, y_val = val.drop(columns=target), val[target]
+            X_test, y_test = test.drop(columns=target), test[target]
 
-                data.df.set_index('utc', inplace=True)
+            self.set_datasets(X_train, X_val, y_train, y_val)
+            self.set_features(num, cat)
 
-                if name != target_name:
-                    data.df.rename({feature: feature + '_' + name for feature in data.df.columns}, axis=1, inplace=True)
-                    data.numeric_features = [feature + '_' + name for feature in data.numeric_features]
-                    data.cat_features = [feature + '_' + name for feature in data.cat_features]
-
-                dfs.append(data.df)
-                numerics += data.numeric_features
-                cats += data.cat_features
-
-            joint_data = FinData(pd.concat(dfs, axis=1).reset_index())
-
-            # добавляем углы 
-            for name in category:
-                if name != target_name:
-                    joint_data.insert_angle(name)
-                    joint_data.insert_angle_ln(name)
-                    numerics += [f'angle_{name}', f'angle_ln_{name}']
-
-            joint_data.numeric_features = numerics
-            joint_data.cat_features = cats
-
-            numeric = joint_data.get_numeric_features()
-            cat = joint_data.get_cat_features()
-
-            # Аргументы для моделей
-            args = {"iterations" : 5000, 
-            "depth" : 6, 
-            "use_best_model" : True, 
-            "verbose" : False,
-            "l2_leaf_reg" : 350,
-            "loss_function" : 'Logloss', 
-            "eval_metric" : 'Accuracy', 
-            "cat_features" : cat, 
-            "random_state" : 42,
-            "early_stopping_rounds" : 1000}
-                            
-            model = CatboostFinModel(args=args)
-
-            test_accuracy = model.test_weekly(df=joint_data.df, start_dt=start_dt, end_dt=end_dt, proportion=proportion, cat=cat, num=numeric)
-            accuracies.append(test_accuracy)
-        return target_names, accuracies
-
+            self.fit()
+            accuracy_sum += self.model.score(X_test, y_test)
+            cnt += 1
+        
+        return accuracy_sum / cnt

@@ -93,6 +93,23 @@ def merged_split(data,
         X_test = restr_data[numeric + cat].iloc[test_indexes]
         y_test = restr_data[target].iloc[test_indexes]
         return X_train, X_val, X_test, y_train, y_val, y_test
+    
+def train_valid_split_candles(data, train_size, val_size, numeric, cat, target, silenced=True):
+    # ДЛЯ ТРЕЙДИНГА
+    train_df = data[-(train_size + val_size) : -val_size]
+    val_df = data[-val_size : ]
+
+    if not silenced:
+        train_sd, val_sd = train_df["utc"].iloc[0], val_df["utc"].iloc[0]
+        train_ed, val_ed = train_df["utc"].iloc[-1], val_df["utc"].iloc[-1]
+        print(f"Начало тренировочного периода: {train_sd}. Конец тренировочного периода: {train_ed} \n \
+                Начало валидационного периода: {val_sd}. Конец валидационного периода: {val_ed}")
+    
+    X_train, y_train = train_df[numeric + cat], train_df[target]
+    X_val, y_val = val_df[numeric + cat], val_df[target]
+
+    return X_train, X_val, y_train, y_val
+
 
 # Трейн-валид разделение 
 def train_valid_split(data, 
