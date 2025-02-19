@@ -36,7 +36,8 @@ class StandartFeaturesMixin:
             self.df[f'close_normed_rsi_{i}'] = self.df['close']/self.df[f'rsi_{i}']
 
             if f'rsi_{i}' not in self.numeric_features:
-                self.numeric_features += [f'rsi_{i}', f'close_normed_rsi_{i}']
+                # self.numeric_features += [f'rsi_{i}', f'close_normed_rsi_{i}']
+                self.numeric_features += [f'rsi_{i}']
 
     
     def insert_high_low_diff(self, windows_hl = [3, 6, 18]):
@@ -51,5 +52,6 @@ class StandartFeaturesMixin:
             self.df[f'close_normed_hl_diff_{i}'] = self.df['close']/self.df[f'hl_diff_{i}']
 
             if f'hl_diff_{i}' not in self.numeric_features:
-                self.numeric_features += [f'hl_diff_{i}', f'close_normed_hl_diff_{i}']
+                # self.numeric_features += [f'hl_diff_{i}', f'close_normed_hl_diff_{i}']
+                self.numeric_features += [f'hl_diff_{i}']
     

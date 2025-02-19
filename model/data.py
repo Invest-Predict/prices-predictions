@@ -7,10 +7,12 @@ from statsmodels.tsa.stattools import adfuller, zivot_andrews
 from datetime import date
 
 from .features import StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin, SmoothingFeaturesMixin
+from .features import SmallFeaturesMixin
 
 # Здесь все признаки и все по датафрейму
 
-class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin, SmoothingFeaturesMixin):
+class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, 
+              UncommonFeaturesMixin, SmoothingFeaturesMixin, SmallFeaturesMixin):
     """
     Класс для обработки финансовых данных. 
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 

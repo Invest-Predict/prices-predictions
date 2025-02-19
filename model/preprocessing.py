@@ -164,7 +164,8 @@ def train_valid_split_stupidly(data,
 
     return X_train, X_val, y_train, y_val
 
-def train_valid_test_split(data, start_period : dt.datetime, train_size, val_size, test_size, numeric, cat, target, silenced = True):
+def train_valid_test_split(data, start_period : dt.datetime, train_size, val_size, test_size, numeric, cat, target, silenced = True, 
+                           need_test = False):
         
         cutted_df = data[data["utc"] >= start_period]
         train_df = cutted_df[:train_size]
@@ -182,4 +183,4 @@ def train_valid_test_split(data, start_period : dt.datetime, train_size, val_siz
         X_val, y_val = val_df[numeric + cat], val_df[target]
         X_test, y_test = test_df[numeric + cat], test_df[target]
 
-        return X_train, X_val, X_test, y_train, y_val, y_test
+        return (X_train, X_val, X_test, y_train, y_val, y_test) if not need_test else (X_train, X_val, X_test, y_train, y_val, y_test, test_df)

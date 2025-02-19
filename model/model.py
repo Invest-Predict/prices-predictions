@@ -79,12 +79,13 @@ class CatboostFinModel():
         self.cat, self.numeric = cat_features, numeric_features
     
 
-    def fit(self):
+    def fit(self, mod = True):
         """
         Обучает модель CatBoostClassifier на обучающей выборке с использованием валидационной выборки.
         """
-        self.X_val = self.X_val[self.numeric + self.cat]
-        self.X_train = self.X_train[self.numeric + self.cat]
+        if mod:
+            self.X_val = self.X_val[self.numeric + self.cat]
+            self.X_train = self.X_train[self.numeric + self.cat]
         self.model.fit(self.X_train, self.y_train, eval_set=Pool(self.X_val, self.y_val, cat_features = self.cat), cat_features = self.cat)
         return self
 
@@ -333,9 +334,10 @@ class CatboostFinModel():
         print(f"Array of scores: {scores}")
             
         return sum(scores) / n_samples
+    
 
     def test_trading(self, df = None, target = 'direction_binary', start_date = None, end_date = None, proportion = [3, 1, 1],
-                    train_df = None, val_df = None, test_df = None,
+                    train_df = None, val_df = None, test_df = None, short = True,
                     initial_budget = 10000, cat = [], num = [], commision = 0.0001):
         '''
         Примитиваня стратегия, пусть мы просто пока покупаем акцию сейчас, если предполагаем, что через десять минут она вырастит в цене
@@ -345,6 +347,7 @@ class CatboostFinModel():
         '''
 
         if train_df is None or val_df is None or test_df is None:
+            df_copy = df.copy()
             train_size, val_size, test_size = 1000, 180, 180
             if end_date is not None:
                 df_copy = df[df["utc"] <= end_date].reset_index().drop(columns=['index'])
@@ -389,14 +392,14 @@ class CatboostFinModel():
                 money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
                 logging.info(f"LONG! - Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
-            elif y_pred == 0:
+            elif y_pred == 0 and short == True:
                 commission_now = ((open_now + close_in_ten_min) * commision) * (money // close_in_ten_min)
                 money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
                 logging.info(f"SHORT! - Date&Time: {X_test['utc'].iloc[i]} - I bought Yandex for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
 
         logging.info(f"\n\n\nMy budget before {initial_budget} and after trading {money}\nMommy, are you prod of me?")
 
-        return money - initial_budget # ны выходе прибыль
+        return money - initial_budget,  self.model.score(X_test, y_test) # ны выходе прибыль
 
 
     def test_weekly(self, df, start_dt = dt.datetime(2024, 1, 1), end_dt=dt.datetime(2024, 12, 31), proportion = [15, 2, 3], target = 'direction_binary', cat = [], num = []):
