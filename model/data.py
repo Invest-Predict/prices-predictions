@@ -7,10 +7,12 @@ from statsmodels.tsa.stattools import adfuller, zivot_andrews
 from datetime import date
 
 from .features import StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin, SmoothingFeaturesMixin
+from .features import SmallFeaturesMixin
 
 # Здесь все признаки и все по датафрейму
 
-class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin, SmoothingFeaturesMixin):
+class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, 
+              UncommonFeaturesMixin, SmoothingFeaturesMixin, SmallFeaturesMixin):
     """
     Класс для обработки финансовых данных. 
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
@@ -49,14 +51,14 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
         self.target = [target_name]
 
-    def make_long_strat_target(self, target_name, commission):
-        self.df["vol_up"] = (self.df['close'].shift(-1) - self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
-        self.df[target_name] = self.df[target_name] = np.where(self.df["vol_up"] > commission * 2, 1, 0)
+    # def make_long_strat_target(self, target_name, commission):
+    #     self.df["vol_up"] = (self.df['close'].shift(-1) - self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
+    #     self.df[target_name] = self.df[target_name] = np.where(self.df["vol_up"] > commission * 2, 1, 0)
 
 
-    def make_short_strat_target(self, target_name, commission):
-        self.df["vol_down"] = (- self.df['close'].shift(-1) + self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
-        self.df[target_name] = (self.df["vol_down"] > commission*2).astype('int')
+    # def make_short_strat_target(self, target_name, commission):
+    #     self.df["vol_down"] = (- self.df['close'].shift(-1) + self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
+    #     self.df[target_name] = (self.df["vol_down"] > commission*2).astype('int')
 
 
     def get_numeric_features(self):
@@ -200,41 +202,42 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, Unco
         if legend:
             plt.legend(facecolor='lightgrey', edgecolor='black', title='Columns')
 
-            
-    def insert_all(self, windows_shifts_norms=None, 
-                         windows_ma=None, 
-                         windows_ema=None,
-                         windows_rsi=None, 
-                         windows_high_low_diff=None, 
-                         windows_stoch_osc=None, 
-                         common_windows=[3, 6, 18]):
-        """
-        Вставляет в DataFrame все реализованные признаки.
 
-        Параметры:
-            windows_shifts_norms (list, optional): Список временных окон для нормализованных сдвигов.
-            windows_ma (list, optional): Список временных окон для расчёта простых скользящих средних.
-            windows_ema (list, optional): Список временных окон для расчёта экспоненциальных скользящих средних.
-            windows_rsi (list, optional): Список временных окон для расчёта индикатора RSI.
-            windows_high_low_diff (list, optional): Список временных окон для расчёта разницы между high и low.
-            windows_stoch_osc (list, optional): Список временных окон для стохастического осциллятора.
-            common_windows (list): Список временных окон по умолчанию для вставки нескольких признаков.
-        """
-        self.insert_shifts_norms(common_windows if windows_shifts_norms==None else windows_shifts_norms)
-        self.insert_time_features()
-        self.insert_holidays()
-        self.insert_seasons()
-        self.insert_rolling_means(common_windows if windows_ma==None else windows_ma)
-        self.insert_exp_rolling_means(common_windows if windows_ema==None else windows_ema)
-        self.insert_rsi(common_windows if windows_rsi==None else windows_rsi)
-        self.insert_bollinger()
-        self.insert_high_low_diff(common_windows if windows_high_low_diff==None else windows_high_low_diff)
-        self.insert_stochastic_oscillator(common_windows if windows_stoch_osc==None else windows_stoch_osc)
-        self.insert_random_prediction() # мамочки 
-        # self.insert_butter_filter()
-        # self.insert_trend_rsi()
-        # self.insert_trend_rolling_means()
-        # self.insert_trend_deviation()
+    def insert_all(self, features_settings : dict | None = None, mini_features : str | None = None):
+        if features_settings == None:
+            standart_windows = list(range(20) + list(range(50, 500, 50)))
+            self.insert_shifts_norms(standart_windows)
+            self.insert_rolling_means(standart_windows)
+            self.insert_exp_rolling_means(standart_windows)
+            self.insert_rsi(standart_windows)
+            self.insert_bollinger()
+            self.insert_high_low_diff(standart_windows)
+            # self.insert_stochastic_oscillator(standart_windows)
+            if mini_features != None: 
+                self.insert_small_close_shifts(mini_features)
+        else: 
+            features = list(features_settings.keys())
+            if "shifts_norms" in features:
+                self.insert_shifts_norms(features_settings["shifts_norms"])
+            if "ma" in features:
+                self.insert_rolling_means(features_settings["ma"])
+            if "ema" in features:
+                self.insert_exp_rolling_means(features_settings["ema"])
+            if "boll" in features:
+                self.insert_bollinger()
+            if "rsi" in features:
+                self.insert_rsi(features_settings["rsi"])
+            if "hl_diff" in features:
+                self.insert_high_low_diff(features_settings["hl_diff"])
+            if "stoch_osc" in features:
+                self.insert_stochastic_oscillator(features_settings["stoch_osc"])
+            if "rand_pred" in features:
+                self.insert_random_prediction()
+            if "mini_features" in features:
+                self.insert_small_close_shifts(features_settings["mini_features"])
+
+        return self.numeric_features, self.cat_features
+
 
     def get_columns(self):
         """

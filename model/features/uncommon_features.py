@@ -50,9 +50,8 @@ class UncommonFeaturesMixin:
         self.df['close_normed_stochastic_oscillator'] = self.df['close'] / self.df['stochastic_oscillator']
         
         if 'close_normed_stochastic_oscillator' not in self.numeric_features:
-            self.numeric_features += ['close_normed_stochastic_oscillator']
-
-            # self.numeric_features += ['stochastic_oscillator', 'close_normed_stochastic_oscillator']
+            # self.numeric_features += ['close_normed_stochastic_oscillator']
+            self.numeric_features += ['stochastic_oscillator']
 
         for i in windows_st:
             self.df[f'stochastic_oscillator_ma_{i}'] = self.df['stochastic_oscillator'].rolling(i).mean()

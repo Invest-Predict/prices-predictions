@@ -4,9 +4,6 @@ from tinkoff.invest.utils import now
 from tinkoff.invest import CandleInterval
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-# from model import FinData
-# from model import CatboostFinModel
-# from model import train_valid_split_candles
 import pandas as pd
 import time
 import logging
@@ -215,8 +212,8 @@ async def make_trading(model, clear_data_df : pd.DataFrame,
         cat = data.get_cat_features()
         x_curr = data.df.tail(1)[num + cat]
         y_pred = model.predict(x_curr)  
-        logging.info(f"Предсказание модели: {y_pred}")
-        money_am = await get_money_on_acc(acc_id)
+        logging.info(f"Предсказание модели: {y_pred}") 
+        money_am = await get_money_on_acc(acc_id) 
         inst_am = int(money_am // data.df.tail(1).close.item())
         if y_pred == 1:
             
