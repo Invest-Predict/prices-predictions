@@ -51,7 +51,6 @@ class UncommonFeaturesMixin:
         
         if 'close_normed_stochastic_oscillator' not in self.numeric_features:
             # self.numeric_features += ['close_normed_stochastic_oscillator']
-
             self.numeric_features += ['stochastic_oscillator']
 
         for i in windows_st:

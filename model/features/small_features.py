@@ -18,7 +18,7 @@ class SmallFeaturesMixin:
             df[f"close_t-{i}"] = df["close"].shift(i) / df["close"].shift(i - 1)
             new_num.append(f"close_t-{i}")
             
-        df = df.reset_index()[new_num]
+        df = df.reset_index()
         self.df.set_index("utc", inplace=True)
         self.df = pd.merge_asof(self.df.reset_index(), df, on="utc", direction="backward", suffixes=("", "_min"))
         

@@ -5,6 +5,7 @@ import datetime as dt
 from multiprocessing import Pool
 from os import cpu_count
 from statsmodels.tsa.filters.hp_filter import hpfilter
+from sklearn.decomposition import PCA
 from functools import partial
 import pandas as pd
 
@@ -93,6 +94,13 @@ def merged_split(data,
         X_test = restr_data[numeric + cat].iloc[test_indexes]
         y_test = restr_data[target].iloc[test_indexes]
         return X_train, X_val, X_test, y_train, y_val, y_test
+
+def PCA(X_train, X_val, X_test, n_comp = "mle"):
+    pca = PCA(n_components = n_comp, random_state=42)
+    X_train_pca, X_val_pca, X_test_pca = pca.fit_transform(X_train), pca.transform(X_val), pca.transform(X_test)
+    return X_train_pca, X_val_pca, X_test_pca
+
+
     
 def train_valid_split_candles(data, train_size, val_size, numeric, cat, target, silenced=True):
     # ДЛЯ ТРЕЙДИНГА
