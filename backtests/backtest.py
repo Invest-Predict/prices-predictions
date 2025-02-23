@@ -36,7 +36,7 @@ class Backtest():
 
         if self._timedelta != '10min':
             data.merge_candles(self._timedelta)
-            data.make_binary_class_target()
+            data.make_binary_class_target(target_name=self._target, ind=0)
         
         # TODO добавить сюда возможность кастомно добавлять фичи
         data.insert_all(features_settings=features)
