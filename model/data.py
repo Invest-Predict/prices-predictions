@@ -39,7 +39,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         self.target : list
 
         self.cat_features = []
-        self.numeric_features = ['volume'] # я бы остальное по умолчанию не стала добавля   ть, потому что оно не нормировано 
+        self.numeric_features = ['volume'] # я бы остальное по умолчанию не стала добавлять, потому что оно не нормировано 
         self.make_binary_class_target(target_name="direction_binary", ind = indifference)
 
     def make_binary_class_target(self, target_name, ind):

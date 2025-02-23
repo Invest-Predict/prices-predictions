@@ -98,8 +98,18 @@ def merged_split(data,
 def mul_PCA(X_train, X_val, X_test, n_comp = "mle"):
     pca = PCA(n_components = n_comp, random_state=42)
     X_train_pca, X_val_pca, X_test_pca = pca.fit_transform(X_train), pca.transform(X_val), pca.transform(X_test)
-    return X_train_pca, X_val_pca, X_test_pca
-
+    numeric_features = [f'PC{i+1}' for i in range(pca.n_components_)]
+    X_train_pca_df = pd.DataFrame(X_train_pca, 
+                                 index=X_train.index, 
+                                 columns=numeric_features)
+    X_val_pca_df = pd.DataFrame(X_val_pca,
+                               index=X_val.index,
+                               columns=numeric_features)
+    X_test_pca_df = pd.DataFrame(X_test_pca,
+                                index=X_test.index,
+                                columns=numeric_features)
+    
+    return X_train_pca_df, X_val_pca_df, X_test_pca_df, numeric_features
 
     
 def train_valid_split_candles(data, train_size, val_size, numeric, cat, target, silenced=True):

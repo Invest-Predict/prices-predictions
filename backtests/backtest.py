@@ -1,5 +1,5 @@
 from typing import Iterable
-from model import FinData, CatboostFinModel
+from model import FinData, CatboostFinModel, mul_PCA
 from catboost import CatBoostClassifier
 import datetime as dt
 import pandas as pd
@@ -29,8 +29,13 @@ class Backtest():
         self.X_train, self.X_val, self.X_test = None,None, None
         self.y_train, self.y_val, self.y_test = None, None, None
         self.cat, self.num = [], []
+        self.features = None
+
+    def set_features(self, features : dict):
+        self.features = features
+
     
-    def custom_datasets(self, df_path, start_dt, end_dt, train_size, val_size, test_size = None, features : dict | None = None, use_PCA=False, return_split = False):
+    def custom_datasets(self, df_path, start_dt, end_dt, train_size, val_size, test_size = None, use_PCA=False, return_split = False):
         data = FinData(df_path)
         data.restrict_time_down(start_dt)
 
@@ -39,10 +44,10 @@ class Backtest():
             data.make_binary_class_target(target_name=self._target, ind=0)
         
         # TODO добавить сюда возможность кастомно добавлять фичи
-        data.insert_all(features_settings=features)
-
+        data.insert_all(features_settings=self.features)
         self.cat = data.get_cat_features()
         self.num = data.get_numeric_features()
+
 
         if isinstance(train_size, dt.timedelta):  # Можно задавать границу сплита на train, val и test через timedelta: 10 days - train, 3 days - val
             train = data.df[data.df['utc'] <= start_dt + train_size]
@@ -52,8 +57,13 @@ class Backtest():
                 test = data.df[data.df['utc'] > start_dt + train_size + val_size][data.df['utc'] <= end_dt]
             else:
                 test = data.df[data.df['utc'] > start_dt + train_size + val_size][data.df['utc'] <= start_dt + train_size + val_size + test_size]
+
             self.X_train, self.X_val, self.X_test = train.drop(columns=self._target), val.drop(columns=self._target), test.drop(columns=self._target)
             self.y_train, self.y_val, self.y_test = train[self._target], val[self._target], test[self._target]
+
+            if use_PCA:
+                self.X_train, self.X_val, self.X_test, self.num = mul_PCA(self.X_train, self.X_val, self.X_test, n_comp="mle")
+
             if return_split:
                 return self.X_train, self.X_val, self.X_test, self.y_train, self.y_val, self.y_test
 
@@ -66,13 +76,13 @@ class Backtest():
         if return_split:
             return self.X_train, self.X_val, self.X_test, self.y_train, self.y_val, self.y_test
     
-    def test_trading(self, budget, custom_datasets_args):
+    def test_trading(self, budget, custom_datasets_args, use_PCA = False):
 
         results = []
 
         for df_path in self._dfs:
             custom_datasets_args['df_path'] = df_path
-            self.custom_datasets(**custom_datasets_args)
+            self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
 
             stock = df_path.split('/')[-1][:-11]  # так обрежеться всё до названия файла из datasets и тажке .csv
             logging.info(f"Backtesting started for stock - {stock}")
@@ -113,7 +123,7 @@ class Backtest():
             results.append(history)
         return results
     
-    def test_multistock(self, budget, custom_datasets_args, proba_limit = 0.0):
+    def test_multistock(self, budget, custom_datasets_args, proba_limit = 0.5, use_PCA = False):
         models = []
         stocks = []
         X_tests, y_tests = [], []
@@ -121,7 +131,7 @@ class Backtest():
         for df_path in self._dfs:  # здесь происходит сборка общего датасета. TODO подумать, а может обучаться надо на каком-то одном и передавать его как stock_train
             custom_datasets_args['df_path'] = df_path
             custom_datasets_args['return_split'] = True
-            self.custom_datasets(**custom_datasets_args)
+            self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
 
             X_train, X_val, X_test, y_train, y_val, y_test = self.custom_datasets(**custom_datasets_args)
             stock = df_path.split('/')[-1][:-11]  # так обрежеться всё до названия файла из datasets и тажке _10_min.csv
@@ -150,9 +160,9 @@ class Backtest():
             y_probs_0, y_probs_1 = [], []
             for X_test, y_test, stock, model in zip(X_tests, y_tests, stocks, models):  # TODO - научиться проверять, что по времени (utc) все совпадают
                 if X_test.shape[0] > i + 1:
-                    y_pred = model.predict_proba(self.X_test[self.num + self.cat].iloc[i])
-                    close_in_ten_min = self.X_test['close'].iloc[i + 1]
-                    open_now = self.X_test['close'].iloc[i]
+                    y_pred = model.predict_proba(X_test[self.num + self.cat].iloc[i])
+                    close_in_ten_min = X_test['close'].iloc[i + 1]
+                    open_now = X_test['close'].iloc[i]
                     y_probs_0.append((y_pred[0], close_in_ten_min, open_now, stock, X_test['utc'].iloc[i]))
                     y_probs_1.append((y_pred[1], close_in_ten_min, open_now, stock, X_test['utc'].iloc[i]))
 
@@ -182,7 +192,7 @@ class Backtest():
         
         logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
         
-        return money - budget,  model.score(self.X_test, self.y_test)
+        return money - budget
 
     # @property
     # def strategies(self) -> list:
