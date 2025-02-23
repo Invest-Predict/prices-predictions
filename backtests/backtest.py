@@ -109,7 +109,8 @@ class Backtest():
 
             logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
 
-            results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
+            # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
+            results.append(history)
         return results
     
     def test_multistock(self, budget, custom_datasets_args, proba_limit = 0.0):
