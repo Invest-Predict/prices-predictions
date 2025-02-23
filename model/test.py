@@ -18,28 +18,6 @@ logging.basicConfig(
     ]
 )
 
-
-def make_features(data : FinData, features_settings : dict):
-    # Attention: inplace modification
-    # TODO Move to FinData class
-    features = list(features_settings.keys())
-    if "shifts_norms" in features:
-        data.insert_shifts_norms(features_settings["shifts_norms"])
-    if "ma" in features:
-        data.insert_rolling_means(features_settings["ma"])
-    if "ema" in features:
-        data.insert_exp_rolling_means(features_settings["ema"])
-    if "boll" in features:
-        data.insert_bollinger()
-    if "rsi" in features:
-        data.insert_rsi()
-    if "hl_diff" in features:
-        data.insert_high_low_diff()
-    if "stoch_osc" in features:
-        data.insert_stochastic_oscillator()
-    if "rand_pred" in features:
-        data.insert_random_prediction()
-
 def calculate_avret(matrix_probs : np.array, matrix_tests : np.array, norm_value, type):
     # добавить сюда комиссию 
     idx_max = np.argpartition(matrix_probs, -norm_value, axis=0)[-norm_value:]

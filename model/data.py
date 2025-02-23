@@ -1,3 +1,4 @@
+from types import NoneType
 import pandas as pd
 import datetime as dt
 import matplotlib.pyplot as plt
@@ -18,7 +19,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
     визуализировать и подготавливать таргет для моделей машинного обучения.
     """
-    def __init__(self, df, column_names=None):
+    def __init__(self, df, column_names=None, indifference = 0):
         """
         Инициализирует объект FinData, загружая данные из CSV-файла.
 
@@ -39,16 +40,19 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
 
         self.cat_features = []
         self.numeric_features = ['volume'] # я бы остальное по умолчанию не стала добавля   ть, потому что оно не нормировано 
-        self.make_binary_class_target(target_name="direction_binary")
+        self.make_binary_class_target(target_name="direction_binary", ind = indifference)
 
-    def make_binary_class_target(self, target_name="direction_binary"):
-        """
+    def make_binary_class_target(self, target_name, ind):
+        """ 
         Создаёт бинарный таргет на основе изменения цены закрытия.
 
         Параметры:
             target_name (str): Название колонки для таргета.
         """
-        self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
+        if ind == 0:
+            self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
+        elif ind == 1:
+            self.df[target_name] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
         self.target = [target_name]
 
     # def make_long_strat_target(self, target_name, commission):
@@ -205,7 +209,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
 
     def insert_all(self, features_settings : dict | None = None, mini_features : str | None = None):
         if features_settings == None:
-            standart_windows = list(range(20) + list(range(50, 500, 50)))
+            standart_windows = list(range(1, 21)) + list(range(50, 500, 50))
             self.insert_shifts_norms(standart_windows)
             self.insert_rolling_means(standart_windows)
             self.insert_exp_rolling_means(standart_windows)
@@ -213,7 +217,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
             self.insert_bollinger()
             self.insert_high_low_diff(standart_windows)
             # self.insert_stochastic_oscillator(standart_windows)
-            if mini_features != None: 
+            if type(mini_features) != NoneType: 
                 self.insert_small_close_shifts(mini_features)
         else: 
             features = list(features_settings.keys())
