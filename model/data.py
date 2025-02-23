@@ -42,9 +42,8 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         self.numeric_features = ['volume'] # я бы остальное по умолчанию не стала добавля   ть, потому что оно не нормировано 
         self.make_binary_class_target(target_name="direction_binary", ind = indifference)
 
-
     def make_binary_class_target(self, target_name, ind):
-        """
+        """ 
         Создаёт бинарный таргет на основе изменения цены закрытия.
 
         Параметры:
@@ -122,7 +121,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         Параметры:
             freq (str): Частота объединения (например, '1H' для объединения по часам).
         """
-        self.df = self.df.set_index('utc').groupby(pd.Grouper(freq=freq)).agg({'open': 'first', 'close': 'last', 'high': 'max', 'low': 'min'}).dropna().reset_index()
+        self.df = self.df.set_index('utc').groupby(pd.Grouper(freq=freq)).agg({'open': 'first', 'close': 'last', 'high': 'max', 'low': 'min', 'volume': 'sum'}).dropna().reset_index()
 
     def visualize_time_frame(self,
                              datetime_start, 
