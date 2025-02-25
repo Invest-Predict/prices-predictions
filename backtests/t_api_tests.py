@@ -52,6 +52,8 @@ def wait_until_next_x1_multiple(x = 10):
     time.sleep(wait_seconds)
 
 def make_features(data : FinData, features_settings : dict):
+
+    # !!!!!
     # Attention: inplace modification
     # Эту нужно будет доделать...
     features = list(features_settings.keys())

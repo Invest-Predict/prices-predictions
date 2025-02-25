@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import datetime as dt
 
 class SmallFeaturesMixin:
     def __init__(self):
@@ -14,6 +15,9 @@ class SmallFeaturesMixin:
             df = pd.read_csv(small_df)
 
         new_num = []
+        start_utc = self.df.iloc[0].utc - dt.timedelta(weeks=1)
+        df.utc = pd.to_datetime(df.utc).dt.tz_localize(None)
+        df = df[df.utc >= start_utc]
         for i in range(candles_num, 0, -step):
             df[f"close_t-{i}"] = df["close"].shift(i) / df["close"].shift(i - 1)
             new_num.append(f"close_t-{i}")

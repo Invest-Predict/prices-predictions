@@ -207,7 +207,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
             plt.legend(facecolor='lightgrey', edgecolor='black', title='Columns')
 
 
-    def insert_all(self, features_settings : dict | None = None, mini_features : str | None = None):
+    def insert_all(self, features_settings : dict | None = None, mini_features  = None):
         if features_settings == None:
             standart_windows = list(range(1, 21)) + list(range(50, 500, 50))
             self.insert_shifts_norms(standart_windows)
