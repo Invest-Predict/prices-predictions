@@ -73,10 +73,10 @@ class Backtest():
             train = data.df[data.df['utc'] <= start_dt + train_size]
             val = data.df[data.df['utc'] > start_dt + train_size][data.df['utc'] <= start_dt + train_size + val_size]
 
-            batch_size = 100
-            # Увеличиваем выборки
-            train = resample_last_batch(train, batch_size)
-            val = resample_last_batch(train, batch_size)
+            # batch_size = 100
+            # # Увеличиваем выборки
+            # train = resample_last_batch(train, batch_size)
+            # val = resample_last_batch(train, batch_size)
 
 
             if test_size is None:
@@ -84,8 +84,8 @@ class Backtest():
             else:
                 test = data.df[data.df['utc'] > start_dt + train_size + val_size][data.df['utc'] <= start_dt + train_size + val_size + test_size]
 
-            X_train, X_val, X_test = train.drop(columns=self._target), val.drop(columns=self._target), test.drop(columns=self._target)
-            y_train, y_val, y_test = train[self._target], val[self._target], test[self._target]
+            self.X_train, self.X_val, self.X_test = train.drop(columns=self._target), val.drop(columns=self._target), test.drop(columns=self._target)
+            self.y_train, self.y_val, self.y_test = train[self._target], val[self._target], test[self._target]
 
             if use_PCA:
                 close = self.X_test.close
@@ -93,7 +93,7 @@ class Backtest():
                 X_test["close"] = close
 
             if return_split:
-                return X_train, X_val, X_test, y_train, y_val, y_test
+                return self.X_train, self.X_val, self.X_test, self.y_train, self.y_val, self.y_test
 
             return
 
@@ -168,7 +168,7 @@ class Backtest():
 
             # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
             results.append(history)
-        return results
+        return results, money
     
     def process_company(self, custom_datasets_args, use_PCA, df_path):
         custom_datasets_args['df_path'] = df_path
