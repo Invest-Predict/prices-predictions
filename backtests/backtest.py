@@ -30,7 +30,7 @@ class Backtest():
         self.y_train, self.y_val, self.y_test = None, None, None
         self.cat, self.num = [], []
     
-    def custom_datasets(self, df_path, start_dt, end_dt, train_size, val_size, test_size = None, features : dict | None = None, use_PCA=False, return_split = False):
+    def custom_datasets(self, df_path, start_dt, end_dt, train_size, val_size, test_size = None, start_dt_test = None, features : dict | None = None, use_PCA=False, return_split = False):
         data = FinData(df_path)
         data.restrict_time_down(start_dt)
 
@@ -58,10 +58,19 @@ class Backtest():
                 return self.X_train, self.X_val, self.X_test, self.y_train, self.y_val, self.y_test
 
             return
+        
 
         X, y = data.df.drop(columns=self._target), data.df[self._target]
-        self.X_train, self.X_val, self.X_test = X[:train_size], X[train_size:train_size + val_size], X[train_size + val_size: train_size + val_size + test_size]
-        self.y_train, self.y_val, self.y_test = y[:train_size], y[train_size:train_size + val_size], y[train_size + val_size: train_size + val_size + test_size]
+        if test_size is not None:
+            self.X_train, self.X_val, self.X_test = X[:train_size], X[train_size:train_size + val_size], X[train_size + val_size: train_size + val_size + test_size]
+            self.y_train, self.y_val, self.y_test = y[:train_size], y[train_size:train_size + val_size], y[train_size + val_size: train_size + val_size + test_size]
+        if start_dt_test is not None:
+            test = data.df[data.df['utc'] >= start_dt_test][data.df['utc'] <= end_dt]
+            self.X_test, self.y_test = test.drop(columns=self._target), test[self._target]
+
+            X, y = data.df.drop(columns=self._target), data.df[self._target]
+            self.X_train, self.X_val = X[:train_size], X[train_size:train_size + val_size]
+            self.y_train, self.y_val = y[:train_size], y[train_size:train_size + val_size]
 
         if return_split:
             return self.X_train, self.X_val, self.X_test, self.y_train, self.y_val, self.y_test
@@ -75,6 +84,7 @@ class Backtest():
             self.custom_datasets(**custom_datasets_args)
 
             stock = df_path.split('/')[-1][:-11]  # так обрежеться всё до названия файла из datasets и тажке .csv
+            print(self.X_train['utc'].iloc[0])
             logging.info(f"Backtesting started for stock - {stock}")
             logging.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
 
@@ -101,11 +111,11 @@ class Backtest():
                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
                     money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
-                    logging.info(f"LONG! - Date&Time: {self.X_test['utc'].iloc[i]} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
+                    logging.info(f"LONG! - Date&Time: {self.X_test['utc'].iloc[i]} - I bought n = {(money  // open_now)} stocks for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
                 elif money >= close_in_ten_min and y_pred == 0 and 'short' in self._strategies:
                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                     money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
-                    logging.info(f"SHORT! - Date&Time: {self.X_test['utc'].iloc[i]} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
+                    logging.info(f"SHORT! - Date&Time: {self.X_test['utc'].iloc[i]} - I bought n = {(money  // open_now)} stocks for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
 
             logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
 
@@ -150,9 +160,9 @@ class Backtest():
             y_probs_0, y_probs_1 = [], []
             for X_test, y_test, stock, model in zip(X_tests, y_tests, stocks, models):  # TODO - научиться проверять, что по времени (utc) все совпадают
                 if X_test.shape[0] > i + 1:
-                    y_pred = model.predict_proba(self.X_test[self.num + self.cat].iloc[i])
-                    close_in_ten_min = self.X_test['close'].iloc[i + 1]
-                    open_now = self.X_test['close'].iloc[i]
+                    y_pred = model.predict_proba(X_test[self.num + self.cat].iloc[i])
+                    close_in_ten_min = X_test['close'].iloc[i + 1]
+                    open_now = X_test['close'].iloc[i]
                     y_probs_0.append((y_pred[0], close_in_ten_min, open_now, stock, X_test['utc'].iloc[i]))
                     y_probs_1.append((y_pred[1], close_in_ten_min, open_now, stock, X_test['utc'].iloc[i]))
 
@@ -182,7 +192,7 @@ class Backtest():
         
         logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
         
-        return money - budget,  model.score(self.X_test, self.y_test)
+        return money - budget
 
     # @property
     # def strategies(self) -> list:
