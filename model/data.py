@@ -19,7 +19,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
     визуализировать и подготавливать таргет для моделей машинного обучения.
     """
-    def __init__(self, df, column_names=None, indifference = 0):
+    def __init__(self, df, column_names=None, indifference = 0, fill_zeroes = False):
         """
         Инициализирует объект FinData, загружая данные из CSV-файла.
 
@@ -40,7 +40,39 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
 
         self.cat_features = []
         self.numeric_features = ['volume'] # я бы остальное по умолчанию не стала добавлять, потому что оно не нормировано 
+
+        if fill_zeroes:
+            self._fill_zeroes()
+
         self.make_binary_class_target(target_name="direction_binary", ind = indifference)
+
+    def _fill_zeroes(self):
+        self.df.set_index('utc', inplace=True)
+
+        # Создаем полный временной ряд с минутными интервалами
+        full_index = pd.date_range(start=self.df.index.min(), end=self.df.index.max(), freq='T')
+
+        # Фильтруем временной ряд, оставляя только минуты с 7:00 до 21:00
+        full_index = full_index[(full_index.time >= dt.time(7, 0)) & (full_index.time <= dt.time(21, 0))]
+
+        # Реиндексируем исходный DataFrame по полному временному ряду
+        df_reindexed = self.df.reindex(full_index)
+        # Заполняем пропущенные значения
+        df_reindexed['volume'] = df_reindexed['volume'].fillna(0)  # volume = 0 для пропущенных свечей
+        df_reindexed['close'] = df_reindexed['close'].ffill()  # close_{t-1} для пропущенных свечей
+        df_reindexed['open'] = df_reindexed['close'].shift(1).fillna(df_reindexed['close'])  # open_t = close_{t-1}
+        df_reindexed['high'] = df_reindexed['close'].shift(1).fillna(df_reindexed['close'])  # high_t = close_{t-1}
+        df_reindexed['low'] = df_reindexed['close'].shift(1).fillna(df_reindexed['close'])  # low_t = close_{t-1}
+
+        # Убедимся, что open, high, low, close равны close_{t-1} для пропущенных свечей
+        df_reindexed['open'] = df_reindexed['close'].shift(1).fillna(df_reindexed['close'])
+        df_reindexed['high'] = df_reindexed['close'].shift(1).fillna(df_reindexed['close'])
+        df_reindexed['low'] = df_reindexed['close'].shift(1).fillna(df_reindexed['close'])
+
+        # Сбрасываем индекс, чтобы 'utc' стал столбцом
+        df_reindexed.reset_index(inplace=True)
+        df_reindexed.rename(columns={'index': 'utc'}, inplace=True)
+        self.df = df_reindexed
 
     def make_binary_class_target(self, target_name, ind):
         """ 
@@ -209,7 +241,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
 
     def insert_all(self, features_settings : dict | None = None, mini_features  = None):
         if features_settings == None:
-            standart_windows = list(range(1, 21)) + list(range(50, 500, 50))
+            standart_windows = list(range(1, 20))
             self.insert_shifts_norms(standart_windows)
             self.insert_rolling_means(standart_windows)
             self.insert_exp_rolling_means(standart_windows)

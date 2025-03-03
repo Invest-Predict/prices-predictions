@@ -63,10 +63,11 @@ class Backtest():
         stock = df_path.split('/')[-1][:-11]
         # добавила новую свою фичу
         small_df = "../../datasets/" + stock + "_1_min.csv"
-        data.insert_all(features_settings=self.features, mini_features=small_df)
+        data.insert_all(features_settings=self.features)
         self.cat = data.get_cat_features()
         self.num = data.get_numeric_features()
         data.restrict_time_down(start_dt)
+        data.df = data.df[(data.df['utc'].dt.time >= dt.time(7, 0)) & (data.df['utc'].dt.time <= dt.time(21, 0))]
 
 
         if isinstance(train_size, dt.timedelta):  # Можно задавать границу сплита на train, val и test через timedelta: 10 days - train, 3 days - val
@@ -138,6 +139,7 @@ class Backtest():
             model.set_features(self.num, self.cat)
 
             model.fit()
+            logging.info(f"{model.get_top_imp_features(20)}")
 
             history = pd.DataFrame(columns=["datetime", "budget"])
             history.loc[0] = [self.X_test['utc'].iloc[0], budget]
@@ -158,13 +160,14 @@ class Backtest():
                     money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
                     logging.info(f"LONG! - {stock}, Date&Time: {self.X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
-                elif money >= close_in_ten_min and y_pred_0 < proba_limit and 'short' in self._strategies:
+                elif money >= close_in_ten_min and y_pred_0 > proba_limit and 'short' in self._strategies:
                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                     money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
 
                     logging.info(f"SHORT! - {stock}, Date&Time: {self.X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
 
             logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+            logging.info(model.score(self.X_test[self.num + self.cat], self.y_test))
 
             # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
             results.append(history)

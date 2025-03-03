@@ -18,11 +18,13 @@ class StandartFeaturesMixin:
         for i in windows_shifts_norms:
             self.df[f'close_norms_{i}'] = self.df['close']/self.df['close'].shift(i)
             self.df[f'close_high_norms_{i}'] = self.df['close']/self.df['high'].shift(i)
+            self.df[f'close_low_norms_{i}'] = self.df['close']/self.df['low'].shift(i)
             self.df[f'high_norms_{i}'] = self.df['high']/self.df['high'].shift(i)
             self.df[f'low_norms_{i}'] = self.df['low']/self.df['low'].shift(i)
 
             if f'close_norms_{i}' not in self.numeric_features:
-                self.numeric_features += [f'close_norms_{i}', f'close_high_norms_{i}', f'high_norms_{i}', f'low_norms_{i}']
+                self.numeric_features += [f'close_norms_{i}', f'close_high_norms_{i}', 
+                                          f'high_norms_{i}', f'low_norms_{i}', f'close_low_norms_{i}']
     
     def insert_rsi(self, windows_rsi = [3, 6, 18]):
         """
