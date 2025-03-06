@@ -9,29 +9,20 @@ from joblib import Parallel, delayed
 from sklearn import clone
 from os import cpu_count
 from sklearn.preprocessing import StandardScaler
-
-
+from backtests.logger_config import setup_logger
 import logging
 
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("testing.log"),
-        logging.StreamHandler()
-    ]
-)
+# def resample_last_batch(df, batch_size):
+#     # это просто мне нужно было чтобы добавить наблюдения еще раз
+#     # типо продублировать в выборке последний день, она здесь просто потому что я тут реально намусорила
+#     regular_part = df.iloc[:-batch_size]  
+#     last_batch = df.iloc[-batch_size:]   
+#     resampled_last_batch = pd.concat([last_batch] * 2, ignore_index=True)  # Дублируем их
+#     df_resampled = pd.concat([regular_part, resampled_last_batch], ignore_index=True)
+#     return df_resampled
 
-def resample_last_batch(df, batch_size):
-    # это просто мне нужно было чтобы добавить наблюдения еще раз
-    # типо продублировать в выборке последний день, она здесь просто потому что я тут реально намусорила
-    regular_part = df.iloc[:-batch_size]  
-    last_batch = df.iloc[-batch_size:]   
-    resampled_last_batch = pd.concat([last_batch] * 2, ignore_index=True)  # Дублируем их
-    df_resampled = pd.concat([regular_part, resampled_last_batch], ignore_index=True)
-    return df_resampled
+# self.logger = setup_logger("baktests_logger", "../logs/backtests.log", level=logging.INFO)
 
 class Backtest():
     def __init__(self, strategies: list[str], args: dict, dfs: list[str], comissions : list[int], timedelta: str = '10min', target: str = 'direction_binary'):
@@ -45,6 +36,7 @@ class Backtest():
         self.y_train, self.y_val, self.y_test = None, None, None
         self.cat, self.num = [], []
         self.features = None
+        self.logger = setup_logger("baktests_logger", "../logs/backtests.log", level=logging.INFO)
 
     def set_features(self, features : dict):
         self.features = features
@@ -67,6 +59,7 @@ class Backtest():
         self.cat = data.get_cat_features()
         self.num = data.get_numeric_features()
         data.restrict_time_down(start_dt)
+        
         data.df = data.df[(data.df['utc'].dt.time >= dt.time(7, 0)) & (data.df['utc'].dt.time <= dt.time(21, 0))]
 
 
@@ -127,8 +120,8 @@ class Backtest():
             self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
 
             stock = df_path.split('/')[-1][:-11]  # так обрежеться всё до названия файла из datasets и тажке .csv
-            logging.info(f"Backtesting started for stock - {stock}")
-            logging.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
+            self.logger.info(f"Backtesting started for stock - {stock}")
+            self.logger.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
 
             self.X_train, self.X_val = self.X_train[self.num + self.cat], self.X_val[self.num + self.cat]
             # scaler = StandardScaler()
@@ -139,7 +132,7 @@ class Backtest():
             model.set_features(self.num, self.cat)
 
             model.fit()
-            logging.info(f"{model.get_top_imp_features(20)}")
+            self.logger.info(f"{model.get_top_imp_features(20)}")
 
             history = pd.DataFrame(columns=["datetime", "budget"])
             history.loc[0] = [self.X_test['utc'].iloc[0], budget]
@@ -159,15 +152,15 @@ class Backtest():
                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
                     money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
-                    logging.info(f"LONG! - {stock}, Date&Time: {self.X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
+                    self.logger.info(f"LONG! - {stock}, Date&Time: {self.X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
                 elif money >= close_in_ten_min and y_pred_0 > proba_limit and 'short' in self._strategies:
                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                     money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
 
-                    logging.info(f"SHORT! - {stock}, Date&Time: {self.X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
+                    self.logger.info(f"SHORT! - {stock}, Date&Time: {self.X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
 
-            logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
-            logging.info(model.score(self.X_test[self.num + self.cat], self.y_test))
+            self.logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+            self.logger.info(model.score(self.X_test[self.num + self.cat], self.y_test))
 
             # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
             results.append(history)
@@ -180,27 +173,27 @@ class Backtest():
         custom_datasets_args['ind'] = 0
         X_train, X_val, X_test, y_train, y_val, y_test, num = self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
         stock = df_path.split('/')[-1][:-11]  
-        logging.info(f"Training long model starterd for stock - {stock}")
-        logging.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
+        self.logger.info(f"Training long model starterd for stock - {stock}")
+        self.logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
         X_train, X_val = X_train[num], X_val[num]
         model_long = CatboostFinModel(self._args[0])
         model_long.set_datasets(X_train, X_val, y_train, y_val)
         model_long.set_features(num, [])
         model_long.fit()
-        logging.info(f"Training long model ended with loss {model_long.model.best_score_}")
+        self.logger.info(f"Training long model ended with loss {model_long.model.best_score_}")
 
         custom_datasets_args['ind'] = 1
         X_train, X_val, X_test, y_train, y_val, y_test, num = self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
         stock = df_path.split('/')[-1][:-11]  
-        logging.info(f"Training short model starterd for stock - {stock}")
-        logging.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
+        self.logger.info(f"Training short model starterd for stock - {stock}")
+        self.logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
         X_train, X_val = X_train[num], X_val[num]
 
         model_short = CatboostFinModel(self._args[1])
         model_short.set_datasets(X_train, X_val, y_train, y_val)
         model_short.set_features(num, [])
         model_short.fit()
-        logging.info(f"Training short model ended with loss {model_long.model.best_score_}")
+        self.logger.info(f"Training short model ended with loss {model_long.model.best_score_}")
         # models_short.append(model_short)
         return (X_test, y_test, stock, model_long, model_short, num)
 
@@ -230,8 +223,8 @@ class Backtest():
                 custom_datasets_args['ind'] = 0
                 X_train, X_val, X_test, y_train, y_val, y_test, num = self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
                 stock = df_path.split('/')[-1][:-11]  # так обрежеться всё до названия файла из datasets и тажке _10_min.csv
-                logging.info(f"Training long model starterd for stock - {stock}")
-                logging.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
+                self.logger.info(f"Training long model starterd for stock - {stock}")
+                self.logger.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
                 X_train, X_val = X_train[num + self.cat], X_val[num + self.cat]
                 stocks.append(stock)
                 X_tests.append(X_test)
@@ -241,21 +234,21 @@ class Backtest():
                 model_long.set_datasets(X_train, X_val, y_train, y_val)
                 model_long.set_features(num, self.cat)
                 model_long.fit()
-                logging.info(f"Training long model ended with loss {model_long.model.best_score_}")
+                self.logger.info(f"Training long model ended with loss {model_long.model.best_score_}")
                 models_long.append(model_long)
 
                 custom_datasets_args['ind'] = 1
                 X_train, X_val, X_test, y_train, y_val, y_test, num = self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
                 stock = df_path.split('/')[-1][:-11]  # так обрежеться всё до названия файла из datasets и тажке _10_min.csv
-                logging.info(f"Training short model starterd for stock - {stock}")
-                logging.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
+                self.logger.info(f"Training short model starterd for stock - {stock}")
+                self.logger.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
                 X_train, X_val = X_train[num + self.cat], X_val[num + self.cat]
 
                 model_short = CatboostFinModel(self._args[1])
                 model_short.set_datasets(X_train, X_val, y_train, y_val)
                 model_short.set_features(num, self.cat)
                 model_short.fit()
-                logging.info(f"Training short model ended with loss {model_short.model.best_score_}")
+                self.logger.info(f"Training short model ended with loss {model_short.model.best_score_}")
                 models_short.append(model_short)
 
             else:
@@ -264,8 +257,8 @@ class Backtest():
                 X_train, X_val, X_test, y_train, y_val, y_test = self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
                 stock = df_path.split('/')[-1][:-11]  # так обрежеться всё до названия файла из datasets и тажке _10_min.csv
 
-                logging.info(f"Training model starterd for stock - {stock}")
-                logging.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
+                self.logger.info(f"Training model starterd for stock - {stock}")
+                self.logger.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
                 X_train, X_val = X_train[self.num + self.cat], X_val[self.num + self.cat]
                 nums.append(self.num)
 
@@ -316,7 +309,7 @@ class Backtest():
                         stock = info[ind_1[0]][2]
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
                         money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
-                        logging.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[ind_1[0]]} - Date&Time: {info[ind_1[0]][3]} - "
+                        self.logger.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[ind_1[0]]} - Date&Time: {info[ind_1[0]][3]} - "
                                      f"I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
 
                     elif y_probs_0[ind_0[0]] > proba_limit and y_probs_1[ind_0[0]] < 0.5:
@@ -328,7 +321,7 @@ class Backtest():
                         stock = info[ind_1[0]][2]
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money_for_both  // open_now)
                         money += (close_in_ten_min - open_now) * (money_for_both  // open_now) - commission_now
-                        logging.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[ind_1[0]]} - Date&Time: {info[ind_1[0]][3]} - "
+                        self.logger.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[ind_1[0]]} - Date&Time: {info[ind_1[0]][3]} - "
                                      f"I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
                         # шорт 
                         open_now = info[ind_0[0]][1]
@@ -336,7 +329,7 @@ class Backtest():
                         stock = info[ind_0[0]][2]
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money_for_both // close_in_ten_min)
                         money += (open_now - close_in_ten_min) * (money_for_both  // open_now) - commission_now
-                        logging.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[ind_0[0]]} - Date&Time: {info[ind_0[0]][3]} - "
+                        self.logger.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[ind_0[0]]} - Date&Time: {info[ind_0[0]][3]} - "
                                      f"I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
                         
                 elif y_probs_0[ind_0[0]] > proba_limit and y_probs_1[ind_0[0]] < 0.5:
@@ -346,7 +339,7 @@ class Backtest():
                     stock = info[ind_0[0]][2]
                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                     money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
-                    logging.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[ind_0[0]]} - Date&Time: {info[ind_0[0]][3]} - "
+                    self.logger.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[ind_0[0]]} - Date&Time: {info[ind_0[0]][3]} - "
                                  f"I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
                     
                 # проходимся по топ-2 тут не if а elif, это важно, то есть я пока что просто страхуюсь на случай если мы не вошли в первый
@@ -360,7 +353,7 @@ class Backtest():
                         stock = info[ind_1[1]][2]
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
                         money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
-                        logging.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[ind_1[1]]} - Date&Time: {info[ind_1[1]][3]} - "
+                        self.logger.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[ind_1[1]]} - Date&Time: {info[ind_1[1]][3]} - "
                                      f"I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
 
                     elif y_probs_0[ind_0[1]] > proba_limit and y_probs_1[ind_0[1]] < 0.5:
@@ -372,7 +365,7 @@ class Backtest():
                         stock = info[ind_1[1]][2]
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money_for_both  // open_now)
                         money += (close_in_ten_min - open_now) * (money_for_both  // open_now) - commission_now
-                        logging.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[ind_1[1]]} - Date&Time: {info[ind_1[1]][3]} - "
+                        self.logger.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[ind_1[1]]} - Date&Time: {info[ind_1[1]][3]} - "
                                      f"I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
                         # шорт 
                         open_now = info[ind_0[1]][1]
@@ -380,7 +373,7 @@ class Backtest():
                         stock = info[ind_0[1]][2]
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money_for_both // close_in_ten_min)
                         money += (open_now - close_in_ten_min) * (money_for_both  // open_now) - commission_now
-                        logging.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[ind_0[1]]} - Date&Time: {info[ind_0[1]][3]} - "
+                        self.logger.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[ind_0[1]]} - Date&Time: {info[ind_0[1]][3]} - "
                                      f"I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
                         
                 elif y_probs_0[ind_0[1]] > proba_limit and y_probs_1[ind_0[1]] < 0.5:
@@ -390,7 +383,7 @@ class Backtest():
                     stock = info[ind_0[1]][2]
                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                     money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
-                    logging.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[ind_0[1]]} - Date&Time: {info[ind_0[1]][3]} - "
+                    self.logger.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[ind_0[1]]} - Date&Time: {info[ind_0[1]][3]} - "
                                  f"I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
 
             else:
@@ -407,8 +400,8 @@ class Backtest():
                 y_probs_0.sort(reverse=True)
                 y_probs_1.sort(reverse=True)
 
-                # logging.info(f"All probs 0: {[e[0] for e in y_probs_0]} and stocks : {[e[3] for e in y_probs_0]}")
-                # logging.info(f"All probs 1: {[e[0] for e in y_probs_1]} and stocks : {[e[3] for e in y_probs_1]}")
+                # self.logger.info(f"All probs 0: {[e[0] for e in y_probs_0]} and stocks : {[e[3] for e in y_probs_0]}")
+                # self.logger.info(f"All probs 1: {[e[0] for e in y_probs_1]} and stocks : {[e[3] for e in y_probs_1]}")
 
                 if 'long' in self._strategies and y_probs_1[0][0] >= proba_limit:  #TODO - 1) Сделать возможность покупать сразу несколько акций 2) Поставить заглушку на min prob
                     open_now = y_probs_1[0][2]
@@ -417,7 +410,7 @@ class Backtest():
                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
                     money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
-                    logging.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[0][0]} - Date&Time: {y_probs_1[0][4]} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
+                    self.logger.info(f"LONG! - stock: {stock} with proba 1 : {y_probs_1[0][0]} - Date&Time: {y_probs_1[0][4]} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
 
                 if 'short' in self._strategies and y_probs_0[0][0] >= proba_limit:
                     open_now = y_probs_0[0][2]
@@ -425,10 +418,10 @@ class Backtest():
                     stock = y_probs_0[0][3]
                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                     money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
-                    logging.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[0][0]} - Date&Time: {y_probs_0[0][4]} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
+                    self.logger.info(f"SHORT! - stock: {stock} with proba 0 : {y_probs_0[0][0]} - Date&Time: {y_probs_0[0][4]} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
                 
             history.append(money)
         
-        logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+        self.logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
         
         return money - budget, history 
