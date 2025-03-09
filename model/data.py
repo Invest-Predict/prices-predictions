@@ -86,6 +86,17 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         elif ind == 1:
             self.df[target_name] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
         self.target = [target_name]
+    
+
+    def make_both_binary_class_target(self, target_name='direction_binary'):
+        """ 
+        Создаёт оба бинарный таргета на основе изменения цены закрытия. (Без учёта параметра ind)
+
+        Параметры:
+            target_name (str): Название колонки для таргета.
+        """
+        self.df[target_name + '_0'] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
+        self.df[target_name + '_1'] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
 
     # def make_long_strat_target(self, target_name, commission):
     #     self.df["vol_up"] = (self.df['close'].shift(-1) - self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
