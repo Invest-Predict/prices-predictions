@@ -13,16 +13,15 @@ from backtests.logger_config import setup_logger
 import logging
 
 
-# def resample_last_batch(df, batch_size):
-#     # это просто мне нужно было чтобы добавить наблюдения еще раз
-#     # типо продублировать в выборке последний день, она здесь просто потому что я тут реально намусорила
-#     regular_part = df.iloc[:-batch_size]  
-#     last_batch = df.iloc[-batch_size:]   
-#     resampled_last_batch = pd.concat([last_batch] * 2, ignore_index=True)  # Дублируем их
-#     df_resampled = pd.concat([regular_part, resampled_last_batch], ignore_index=True)
-#     return df_resampled
-
-# self.logger = setup_logger("baktests_logger", "../logs/backtests.log", level=self._logger.INFO)
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("testing.log"),
+        logging.StreamHandler()
+    ]
+)
 
 def resample_last_batch(df, batch_size):
     # это просто мне нужно было чтобы добавить наблюдения еще раз
@@ -51,128 +50,154 @@ class Backtest():
         self.features = features
 
     
-    def custom_datasets(self, df_path, start_dt, end_dt, train_size, val_size, test_size = None, use_PCA=False, return_split = False, ind = 0):
-        data = FinData(df_path, indifference=ind)
-        # timedelta чтобы не было нанов в признаках, потом оно еще раз режется после генерации
-        data.restrict_time_down(start_dt - dt.timedelta(weeks=4))
+    def another_train_val_test_split(self, df, train_size, val_size, test_size, start_dt_test, targets = None):
 
-        if self._timedelta != '10min':
-            data.merge_candles(self._timedelta)
-            data.make_binary_class_target(target_name=self._target)
-        
-        # TODO добавить сюда возможность кастомно добавлять фичи
-        stock = df_path.split('/')[-1][:-11]
-        # добавила новую свою фичу
-        small_df = "../../datasets/" + stock + "_1_min.csv"
-        data.insert_all(features_settings=self.features)
-        self.cat = data.get_cat_features()
-        self.num = data.get_numeric_features()
-        data.restrict_time_down(start_dt)
-        data.df = data.df[(data.df['utc'].dt.time >= dt.time(7, 0)) & (data.df['utc'].dt.time <= dt.time(21, 0))]
+        if isinstance(train_size, dt.timedelta):
+            df_train = df[df['utc'] >= start_dt_test - val_size - train_size][df['utc'] < start_dt_test + val_size]
+            df_val = df[df['utc'] >= start_dt_test - val_size][df['utc'] < start_dt_test]
+            df_test = df[df['utc'] >= start_dt_test][df['utc'] < start_dt_test + test_size]
+        else: # please, don't use it, let's use timedeltas instead =)
+            df_train = df[df['utc'] < start_dt_test].iloc[-(train_size + val_size):val_size]
+            df_val = df[df['utc'] < start_dt_test].iloc[-val_size:]
+            df_test = df[df['utc'] >= start_dt_test].iloc[:test_size]
+        if targets is None:
+            targets = [self._target]
+        X_train, y_train = df_train.drop(columns = targets), df_train[targets]
+        X_val, y_val = df_val.drop(columns = targets), df_val[targets]
+        X_test, y_test = df_test.drop(columns = targets), df_test[targets]
+        return X_train, X_val, X_test, y_train, y_val, y_test
 
-
-        if isinstance(train_size, dt.timedelta):  # Можно задавать границу сплита на train, val и test через timedelta: 10 days - train, 3 days - val
-            train = data.df[data.df['utc'] <= start_dt + train_size]
-            val = data.df[data.df['utc'] > start_dt + train_size][data.df['utc'] <= start_dt + train_size + val_size]
-
-            # batch_size = 100
-            # # Увеличиваем выборки
-            # train = resample_last_batch(train, batch_size)
-            # val = resample_last_batch(train, batch_size)
-
-
-            if test_size is None:
-                test = data.df[data.df['utc'] > start_dt + train_size + val_size][data.df['utc'] <= end_dt]
-            else:
-                test = data.df[data.df['utc'] > start_dt + train_size + val_size][data.df['utc'] <= start_dt + train_size + val_size + test_size]
-
-            self.X_train, self.X_val, self.X_test = train.drop(columns=self._target), val.drop(columns=self._target), test.drop(columns=self._target)
-            self.y_train, self.y_val, self.y_test = train[self._target], val[self._target], test[self._target]
-
-            if use_PCA:
-                close = self.X_test.close
-                X_train, X_val, X_test, self.num = mul_PCA(X_train, X_val, X_test, n_comp="mle")
-                X_test["close"] = close
-
-            if return_split:
-                return self.X_train, self.X_val, self.X_test, self.y_train, self.y_val, self.y_test
-
-            return
-
-        X, y = data.df.drop(columns=self._target), data.df[self._target]
-        self.X_train, self.X_val, self.X_test = X[:train_size], X[train_size:train_size + val_size], X[train_size + val_size: train_size + val_size + test_size]
-        self.y_train, self.y_val, self.y_test = y[:train_size], y[train_size:train_size + val_size], y[train_size + val_size: train_size + val_size + test_size]
-
-        if use_PCA:
-            close = self.X_test.close
-            utc_test = self.X_test.utc
-            utc_train = self.X_train.utc
-            utc_val = self.X_val.utc
-            features = self.num + self.cat
-            self.X_train, self.X_val, self.X_test = self.X_train[features], self.X_val[features], self.X_test[features]
-            self.X_train, self.X_val, self.X_test, self.num = mul_PCA(self.X_train, self.X_val, self.X_test, n_comp="mle")
-            self.X_test["close"] = close
-            self.X_test["utc"] = utc_test
-            self.X_train["utc"] = utc_train
-            self.X_val["utc"] = utc_val
-
-        if return_split:
-            return self.X_train, self.X_val, self.X_test, self.y_train, self.y_val, self.y_test, self.num
     
-    def test_trading(self, budget, custom_datasets_args, proba_limit = 0.5, use_PCA = False):
+    def test_trading(self, budget, train_size, val_size, test_size, start_dt_test, end_dt_test, proba_limit = 0.5, use_already_fitted_model = False):
 
         results = []
 
-        for df_path in self._dfs:
-            custom_datasets_args['df_path'] = df_path
-            self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
-
-            stock = df_path.split('/')[-1][:-11]  # так обрежеться всё до названия файла из datasets и тажке .csv
-            self._logger.info(f"Backtesting started for stock - {stock}")
-            self._logger.info(f"Train dates: {self.X_train['utc'].iloc[0]} - {self.X_train['utc'].iloc[-1]} | Valid dates: {self.X_val['utc'].iloc[0]} - {self.X_val['utc'].iloc[-1]} | Test dates: {self.X_test['utc'].iloc[0]} - {self.X_test['utc'].iloc[-1]}")
-
-            self.X_train, self.X_val = self.X_train[self.num + self.cat], self.X_val[self.num + self.cat]
-            # scaler = StandardScaler()
-            # self.X_train = scaler.fit_transform(self.X_train)
-            # self.X_val = scaler.transform(self.X_val)
-            model = CatboostFinModel(self._args)
-            model.set_datasets(self.X_train, self.X_val, self.y_train, self.y_val)
-            model.set_features(self.num, self.cat)
-
-            model.fit()
-            self._logger.info(f"{model.get_top_imp_features(20)}")
-
+        for stock, df in self._dfs.items():
+            rounds = 0
             history = pd.DataFrame(columns=["datetime", "budget"])
-            history.loc[0] = [self.X_test['utc'].iloc[0], budget]
+            history.loc[0] = [start_dt_test, budget]
             money = budget
+            itr = 0  # for the history
+            corner_dt = start_dt_test
+            while corner_dt <= end_dt_test:
+                rounds += 1
+                corner_dt += test_size
+                X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(df, train_size, val_size, test_size, corner_dt)
+                logging.info(f"Backtesting started for stock - {stock} | round - {rounds}")
+                logging.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
 
+                if round == 1 or use_already_fitted_model == False:
+                    X_train, X_val = X_train[self.num + self.cat], X_val[self.num + self.cat]
+                    model = CatboostFinModel(self._args)
+                    model.set_datasets(X_train, X_val, y_train, y_val)
+                    model.set_features(self.num, self.cat)
 
-            for i in range(self.X_test.shape[0] - 1):
-                # test = pd.DataFrame(scaler.transform(self.X_test[self.num + self.cat]))
-                y_preds = model.predict_proba(self.X_test[self.num + self.cat].iloc[i])
-                y_pred_1, y_pred_0 = y_preds[1], y_preds[0]
-                close_in_ten_min = self.X_test['close'].iloc[i + 1]
-                open_now = self.X_test['close'].iloc[i]
+                    model.fit()
+                    logging.info(f"{model.get_top_imp_features(20)}")
 
-                history.loc[i + 1] = [self.X_test['utc'].iloc[i + 1], money]
+                for i in range(X_test.shape[0] - 1):
+                    itr += 1
+                    # test = pd.DataFrame(scaler.transform(self.X_test[self.num + self.cat]))
+                    y_preds = model.predict_proba(X_test[self.num + self.cat].iloc[i])
+                    y_pred_1, y_pred_0 = y_preds[1], y_preds[0]
+                    close_in_ten_min = X_test['close'].iloc[i + 1]
+                    open_now = X_test['close'].iloc[i]
 
-                if money >= open_now and y_pred_1 > proba_limit and 'long' in self._strategies:
-                    commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
-                    money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
+                    history.loc[itr] = [X_test['utc'].iloc[i + 1], money]
 
-                    self._logger.info(f"LONG! - {stock}, Date&Time: {self.X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
-                elif money >= close_in_ten_min and y_pred_0 > proba_limit and 'short' in self._strategies:
-                    commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
-                    money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
+                    if money >= open_now and y_pred_1 > proba_limit and 'long' in self._strategies:
+                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
+                        money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
-                    self._logger.info(f"SHORT! - {stock}, Date&Time: {self.X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
+                        logging.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
+                    elif money >= close_in_ten_min and y_pred_0 > proba_limit and 'short' in self._strategies:
+                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
+                        money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
 
-            self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
-            self._logger.info(model.score(self.X_test[self.num + self.cat], self.y_test))
+                        logging.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
+                logging.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
 
-            # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
+            logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+            logging.info(model.score(X_test[self.num + self.cat], y_test))
+
+                # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
             results.append(history)
         return results, money
+        
+    
+    
+    def test_trading_long_short(self, budget, train_size, val_size, test_size, start_dt_test, end_dt_test, args_for_strategies: dict[str: tuple],
+                                proba_limit = 0.5, use_already_fitted_model = False):
+        
+        # args_for_strategies - это словать из двух items, вида {'short': (model_args0, target_name0), 'long': (model_args1, target_name1)}
+        
+        results = []
+
+        for stock, df in self._dfs.items():
+            rounds = 0
+            history = pd.DataFrame(columns=["datetime", "budget"])
+            history.loc[0] = [start_dt_test, budget]
+            money = budget
+            itr = 0  # for the history
+            corner_dt = start_dt_test
+            while corner_dt <= end_dt_test:
+                rounds += 1
+                corner_dt += test_size
+
+                target_0, target_1 = args_for_strategies['short'][1], args_for_strategies['long'][1]
+                model_args0, model_args1 = args_for_strategies['short'][0], args_for_strategies['long'][0]
+                X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(df, train_size, val_size, test_size, corner_dt, [target_0, target_1])
+                logging.info(f"Backtesting started for stock - {stock} | round - {rounds}")
+                logging.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
+
+                if round == 1 or use_already_fitted_model == False:
+                    X_train, X_val = X_train[self.num + self.cat], X_val[self.num + self.cat]
+                    model0 = CatboostFinModel(model_args0)
+                    model0.set_datasets(X_train, X_val, y_train[target_0], y_val[target_0])
+                    model0.set_features(self.num, self.cat)
+
+                    model0.fit()
+
+                    model1 = CatboostFinModel(model_args1)
+                    model1.set_datasets(X_train, X_val, y_train[target_1], y_val[target_1])
+                    model1.set_features(self.num, self.cat)
+
+                    model1.fit()
+                    logging.info(f"Important features for model 0 (short): {model0.get_top_imp_features(20)}")
+                    logging.info(f"Important features for model 1 (long): {model1.get_top_imp_features(20)}")
+
+                for i in range(X_test.shape[0] - 1):
+                    itr += 1
+                    # test = pd.DataFrame(scaler.transform(self.X_test[self.num + self.cat]))
+                    y_preds0 = model0.predict_proba(X_test[self.num + self.cat].iloc[i])
+                    y_preds1 = model1.predict_proba(X_test[self.num + self.cat].iloc[i])
+                    y_pred_1, y_pred_0 = y_preds1[1], y_preds0[0]
+                    close_in_ten_min = X_test['close'].iloc[i + 1]
+                    open_now = X_test['close'].iloc[i]
+
+                    history.loc[itr] = [X_test['utc'].iloc[i + 1], money]
+
+                    if money >= open_now and y_pred_1 > proba_limit:
+                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
+                        money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
+
+                        logging.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
+                    elif money >= close_in_ten_min and y_pred_0 > proba_limit:
+                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
+                        money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
+
+                        logging.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
+                logging.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
+
+            logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+            logging.info(f"Model for short score: {model0.score(X_test[self.num + self.cat], y_test[target_0])}")
+            logging.info(f"Model for long score: {model1.score(X_test[self.num + self.cat], y_test[target_1])}")
+
+
+                # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
+            results.append(history)
+        return results, money
+        
     
     def process_company(self, custom_datasets_args, use_PCA, df_path):
         custom_datasets_args['df_path'] = df_path
@@ -430,6 +455,82 @@ class Backtest():
                 
             history.append(money)
         
-        self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+        logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+    
+
+    def custom_datasets(self, df_path, start_dt, end_dt, train_size, val_size, test_size = None, use_PCA=False, return_split = False, ind = 0):
+        data = FinData(df_path, indifference=ind)
+        # timedelta чтобы не было нанов в признаках, потом оно еще раз режется после генерации
+        data.restrict_time_down(start_dt - dt.timedelta(weeks=4))
+
+        if self._timedelta != '10min':
+            data.merge_candles(self._timedelta)
+            data.make_binary_class_target(target_name=self._target)
         
-        return money - budget, history 
+        # TODO добавить сюда возможность кастомно добавлять фичи
+        stock = df_path.split('/')[-1][:-11]
+        # добавила новую свою фичу
+        small_df = "../../datasets/" + stock + "_1_min.csv"
+        data.insert_all(features_settings=self.features)
+        self.cat = data.get_cat_features()
+        self.num = data.get_numeric_features()
+        data.restrict_time_down(start_dt)
+        data.df = data.df[(data.df['utc'].dt.time >= dt.time(7, 0)) & (data.df['utc'].dt.time <= dt.time(21, 0))]
+
+
+        if isinstance(train_size, dt.timedelta):  # Можно задавать границу сплита на train, val и test через timedelta: 10 days - train, 3 days - val
+            train = data.df[data.df['utc'] <= start_dt + train_size]
+            val = data.df[data.df['utc'] > start_dt + train_size][data.df['utc'] <= start_dt + train_size + val_size]
+
+            # batch_size = 100
+            # # Увеличиваем выборки
+            # train = resample_last_batch(train, batch_size)
+            # val = resample_last_batch(train, batch_size)
+
+
+            if test_size is None:
+                test = data.df[data.df['utc'] > start_dt + train_size + val_size][data.df['utc'] <= end_dt]
+            else:
+                test = data.df[data.df['utc'] > start_dt + train_size + val_size][data.df['utc'] <= start_dt + train_size + val_size + test_size]
+
+            self.X_train, self.X_val, self.X_test = train.drop(columns=self._target), val.drop(columns=self._target), test.drop(columns=self._target)
+            self.y_train, self.y_val, self.y_test = train[self._target], val[self._target], test[self._target]
+
+            if use_PCA:
+                close = self.X_test.close
+                X_train, X_val, X_test, self.num = mul_PCA(X_train, X_val, X_test, n_comp="mle")
+                X_test["close"] = close
+
+            if return_split:
+                return self.X_train, self.X_val, self.X_test, self.y_train, self.y_val, self.y_test
+
+            return
+        
+
+        X, y = data.df.drop(columns=self._target), data.df[self._target]
+        if test_size is not None:
+            self.X_train, self.X_val, self.X_test = X[:train_size], X[train_size:train_size + val_size], X[train_size + val_size: train_size + val_size + test_size]
+            self.y_train, self.y_val, self.y_test = y[:train_size], y[train_size:train_size + val_size], y[train_size + val_size: train_size + val_size + test_size]
+        if start_dt_test is not None:
+            test = data.df[data.df['utc'] >= start_dt_test][data.df['utc'] <= end_dt]
+            self.X_test, self.y_test = test.drop(columns=self._target), test[self._target]
+
+            X, y = data.df.drop(columns=self._target), data.df[self._target]
+            self.X_train, self.X_val = X[:train_size], X[train_size:train_size + val_size]
+            self.y_train, self.y_val = y[:train_size], y[train_size:train_size + val_size]
+
+        if use_PCA:
+            close = self.X_test.close
+            utc_test = self.X_test.utc
+            utc_train = self.X_train.utc
+            utc_val = self.X_val.utc
+            features = self.num + self.cat
+            self.X_train, self.X_val, self.X_test = self.X_train[features], self.X_val[features], self.X_test[features]
+            self.X_train, self.X_val, self.X_test, self.num = mul_PCA(self.X_train, self.X_val, self.X_test, n_comp="mle")
+            self.X_test["close"] = close
+            self.X_test["utc"] = utc_test
+            self.X_train["utc"] = utc_train
+            self.X_val["utc"] = utc_val
+
+        if return_split:
+            return self.X_train, self.X_val, self.X_test, self.y_train, self.y_val, self.y_test, self.num

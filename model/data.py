@@ -86,7 +86,27 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
             self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
         elif ind == 1:
             self.df[target_name] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
-        self.target.append(target_name)
+        self.target = [target_name]
+    
+
+    def make_both_binary_class_target(self, target_name='direction_binary'):
+        """ 
+        Создаёт оба бинарный таргета на основе изменения цены закрытия. (Без учёта параметра ind)
+
+        Параметры:
+            target_name (str): Название колонки для таргета.
+        """
+        self.df[target_name + '_0'] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
+        self.df[target_name + '_1'] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
+
+    # def make_long_strat_target(self, target_name, commission):
+    #     self.df["vol_up"] = (self.df['close'].shift(-1) - self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
+    #     self.df[target_name] = self.df[target_name] = np.where(self.df["vol_up"] > commission * 2, 1, 0)
+
+
+    # def make_short_strat_target(self, target_name, commission):
+    #     self.df["vol_down"] = (- self.df['close'].shift(-1) + self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
+    #     self.df[target_name] = (self.df["vol_down"] > commission*2).astype('int')
 
 
     def get_numeric_features(self):
