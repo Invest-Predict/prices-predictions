@@ -47,7 +47,7 @@ def split_data(train_size, val_size, test_size):
         return X_train, X_val, X_test, y_train, y_val, y_test
     return FunctionTransformer(_split_data, validate=False)
 
-def create_pipeline(df_path, start_dt, end_dt, train_size, val_size, test_size, features, fill_skips):
+def create_pipeline(df_path, start_dt, end_dt, train_size, val_size, test_size, features = None, fill_skips = True):
     pipeline = Pipeline([
         ('initialize_findata', initialize_findata(df_path, fill_skips)),
         ('restrict_time_down', restrict_time_down(weeks=4)),

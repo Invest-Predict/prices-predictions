@@ -260,8 +260,6 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
             self.insert_bollinger()
             self.insert_high_low_diff(standart_windows)
             # self.insert_stochastic_oscillator(standart_windows)
-            if type(mini_features) != NoneType: 
-                self.insert_small_close_shifts(mini_features)
         else: 
             features = list(features_settings.keys())
             if "shifts_norms" in features:
