@@ -16,3 +16,6 @@ def setup_logger(name, log_file, level=logging.INFO):
 
     return logger
 
+# Определяем два логгера
+# sandbox_logger = setup_logger("api_logger", "sandbox.log", level=logging.INFO)
+

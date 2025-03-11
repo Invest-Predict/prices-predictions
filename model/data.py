@@ -19,7 +19,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
     визуализировать и подготавливать таргет для моделей машинного обучения.
     """
-    def __init__(self, df, column_names=None, indifference = 0, fill_zeroes = False):
+    def __init__(self, df, column_names=None, fill_skips = False):
         """
         Инициализирует объект FinData, загружая данные из CSV-файла.
 
@@ -41,12 +41,13 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         self.cat_features = []
         self.numeric_features = ['volume'] # я бы остальное по умолчанию не стала добавлять, потому что оно не нормировано 
 
-        if fill_zeroes:
-            self._fill_zeroes()
+        if fill_skips:
+            self._fill_skips()
 
-        self.make_binary_class_target(target_name="direction_binary", ind = indifference)
+        self.make_binary_class_target(target_name="direction_binary_0", ind = 0)
+        self.make_binary_class_target(target_name="direction_binary_1", ind = 1)
 
-    def _fill_zeroes(self):
+    def _fill_skips(self):
         self.df.set_index('utc', inplace=True)
 
         # Создаем полный временной ряд с минутными интервалами
@@ -85,16 +86,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
             self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
         elif ind == 1:
             self.df[target_name] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
-        self.target = [target_name]
-
-    # def make_long_strat_target(self, target_name, commission):
-    #     self.df["vol_up"] = (self.df['close'].shift(-1) - self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
-    #     self.df[target_name] = self.df[target_name] = np.where(self.df["vol_up"] > commission * 2, 1, 0)
-
-
-    # def make_short_strat_target(self, target_name, commission):
-    #     self.df["vol_down"] = (- self.df['close'].shift(-1) + self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
-    #     self.df[target_name] = (self.df["vol_down"] > commission*2).astype('int')
+        self.target.append(target_name)
 
 
     def get_numeric_features(self):
@@ -114,10 +106,9 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
             list: Список названий категориальных колонок.
         """
         return self.cat_features
-
-    def restrict_time_by_candles(self, date: dt.datetime, number_before, num_after):
-        # режем по количеству свечей 
-        pass
+    
+    def keep_specific_time(self, start_time : dt.time, end_time : dt.time):
+        self.df = self.df[(self.df['utc'].dt.time >= start_time) & (self.df['utc'].dt.time <= end_time)]
 
     def restrict_time_down(self, date : dt.datetime = None, months = 2, days = 0):
         """
