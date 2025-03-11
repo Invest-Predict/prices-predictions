@@ -23,7 +23,7 @@ def resample_last_batch(df, batch_size):
     return df_resampled
 
 class Backtest():
-    def __init__(self, strategies: list[str], args: dict, dfs: list[str], comissions : list[int], timedelta: str = '10min', target: str = 'direction_binary'):
+    def __init__(self, strategies: list[str], args: dict, dfs: list[str], features: list, comissions : list[int], timedelta: str = '10min', target: str = 'direction_binary'):
         self._strategies = strategies  # ['long', 'short']
         self._args = args  # usual argumets for CatboostFinModel
         self._dfs = dfs  # list of paths to datasests. For example ['../../datasets/']
@@ -32,7 +32,7 @@ class Backtest():
         self._target = target
         self.X_train, self.X_val, self.X_test = None,None, None
         self.y_train, self.y_val, self.y_test = None, None, None
-        self.cat, self.num = [], []
+        self.cat, self.num = features[0], features[1]
         self.features = None
         self._logger = setup_logger("baktests_logger", "../logs/backtests.log", level=logging.INFO)
 
@@ -43,7 +43,7 @@ class Backtest():
     def another_train_val_test_split(self, df, train_size, val_size, test_size, start_dt_test, targets = None):
 
         if isinstance(train_size, dt.timedelta):
-            df_train = df[df['utc'] >= start_dt_test - val_size - train_size][df['utc'] < start_dt_test + val_size]
+            df_train = df[df['utc'] >= start_dt_test - val_size - train_size][df['utc'] < start_dt_test - val_size]
             df_val = df[df['utc'] >= start_dt_test - val_size][df['utc'] < start_dt_test]
             df_test = df[df['utc'] >= start_dt_test][df['utc'] < start_dt_test + test_size]
         else: # please, don't use it, let's use timedeltas instead =)
@@ -64,15 +64,15 @@ class Backtest():
 
         for stock, df in self._dfs.items():
             rounds = 0
-            history = pd.DataFrame(columns=["datetime", "budget"])
-            history.loc[0] = [start_dt_test, budget]
+            history = pd.DataFrame(columns=["datetime", "budget", "strategy"])
+            history.loc[0] = [start_dt_test, budget, 'start']
             money = budget
             itr = 0  # for the history
             corner_dt = start_dt_test
             while corner_dt <= end_dt_test:
                 rounds += 1
-                corner_dt += test_size
                 X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(df, train_size, val_size, test_size, corner_dt)
+                corner_dt += test_size
                 self._logger.info(f"Backtesting started for stock - {stock} | round - {rounds}")
                 self._logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
 
@@ -93,18 +93,21 @@ class Backtest():
                     close_in_ten_min = X_test['close'].iloc[i + 1]
                     open_now = X_test['close'].iloc[i]
 
-                    history.loc[itr] = [X_test['utc'].iloc[i + 1], money]
 
                     if money >= open_now and y_pred_1 > proba_limit and 'long' in self._strategies:
+                        history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'long']
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
                         money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
                         self._logger.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
                     elif money >= close_in_ten_min and y_pred_0 > proba_limit and 'short' in self._strategies:
+                        history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'short']
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                         money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
 
                         self._logger.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
+                    else:
+                        history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'wait']
                 self._logger.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
 
             self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
@@ -117,7 +120,7 @@ class Backtest():
     
     
     def test_trading_long_short(self, budget, train_size, val_size, test_size, start_dt_test, end_dt_test, args_for_strategies: dict[str: tuple],
-                                proba_limit = 0.5, use_already_fitted_model = False):
+                                proba_limit = 0.5, use_already_fitted_model = False, use_PCA = False):
         
         # args_for_strategies - это словать из двух items, вида {'short': (model_args0, target_name0), 'long': (model_args1, target_name1)}
         
@@ -125,18 +128,19 @@ class Backtest():
 
         for stock, df in self._dfs.items():
             rounds = 0
-            history = pd.DataFrame(columns=["datetime", "budget"])
-            history.loc[0] = [start_dt_test, budget]
+            history = pd.DataFrame(columns=["datetime", "budget", "strategy"])
+            history.loc[0] = [start_dt_test, budget, "start"]
             money = budget
             itr = 0  # for the history
             corner_dt = start_dt_test
             while corner_dt <= end_dt_test:
                 rounds += 1
-                corner_dt += test_size
 
                 target_0, target_1 = args_for_strategies['short'][1], args_for_strategies['long'][1]
                 model_args0, model_args1 = args_for_strategies['short'][0], args_for_strategies['long'][0]
                 X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(df, train_size, val_size, test_size, corner_dt, [target_0, target_1])
+
+                corner_dt += test_size
                 self._logger.info(f"Backtesting started for stock - {stock} | round - {rounds}")
                 self._logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
 
@@ -165,18 +169,21 @@ class Backtest():
                     close_in_ten_min = X_test['close'].iloc[i + 1]
                     open_now = X_test['close'].iloc[i]
 
-                    history.loc[itr] = [X_test['utc'].iloc[i + 1], money]
 
                     if money >= open_now and y_pred_1 > proba_limit:
+                        history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'long']
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
                         money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
                         self._logger.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
                     elif money >= close_in_ten_min and y_pred_0 > proba_limit:
+                        history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'short']
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                         money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
 
                         self._logger.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
+                    else:
+                        history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'wait']
                 self._logger.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
 
             self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
