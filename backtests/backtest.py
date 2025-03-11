@@ -13,16 +13,6 @@ from backtests.logger_config import setup_logger
 import logging
 
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("testing.log"),
-        logging.StreamHandler()
-    ]
-)
-
 def resample_last_batch(df, batch_size):
     # это просто мне нужно было чтобы добавить наблюдения еще раз
     # типо продублировать в выборке последний день, она здесь просто потому что я тут реально намусорила
@@ -83,8 +73,8 @@ class Backtest():
                 rounds += 1
                 corner_dt += test_size
                 X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(df, train_size, val_size, test_size, corner_dt)
-                logging.info(f"Backtesting started for stock - {stock} | round - {rounds}")
-                logging.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
+                self._logger.info(f"Backtesting started for stock - {stock} | round - {rounds}")
+                self._logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
 
                 if round == 1 or use_already_fitted_model == False:
                     X_train, X_val = X_train[self.num + self.cat], X_val[self.num + self.cat]
@@ -93,7 +83,7 @@ class Backtest():
                     model.set_features(self.num, self.cat)
 
                     model.fit()
-                    logging.info(f"{model.get_top_imp_features(20)}")
+                    self._logger.info(f"{model.get_top_imp_features(20)}")
 
                 for i in range(X_test.shape[0] - 1):
                     itr += 1
@@ -109,16 +99,16 @@ class Backtest():
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
                         money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
-                        logging.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
+                        self._logger.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
                     elif money >= close_in_ten_min and y_pred_0 > proba_limit and 'short' in self._strategies:
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                         money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
 
-                        logging.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
-                logging.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
+                        self._logger.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
+                self._logger.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
 
-            logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
-            logging.info(model.score(X_test[self.num + self.cat], y_test))
+            self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+            self._logger.info(model.score(X_test[self.num + self.cat], y_test))
 
                 # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
             results.append(history)
@@ -147,8 +137,8 @@ class Backtest():
                 target_0, target_1 = args_for_strategies['short'][1], args_for_strategies['long'][1]
                 model_args0, model_args1 = args_for_strategies['short'][0], args_for_strategies['long'][0]
                 X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(df, train_size, val_size, test_size, corner_dt, [target_0, target_1])
-                logging.info(f"Backtesting started for stock - {stock} | round - {rounds}")
-                logging.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
+                self._logger.info(f"Backtesting started for stock - {stock} | round - {rounds}")
+                self._logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
 
                 if round == 1 or use_already_fitted_model == False:
                     X_train, X_val = X_train[self.num + self.cat], X_val[self.num + self.cat]
@@ -163,8 +153,8 @@ class Backtest():
                     model1.set_features(self.num, self.cat)
 
                     model1.fit()
-                    logging.info(f"Important features for model 0 (short): {model0.get_top_imp_features(20)}")
-                    logging.info(f"Important features for model 1 (long): {model1.get_top_imp_features(20)}")
+                    self._logger.info(f"Important features for model 0 (short): {model0.get_top_imp_features(20)}")
+                    self._logger.info(f"Important features for model 1 (long): {model1.get_top_imp_features(20)}")
 
                 for i in range(X_test.shape[0] - 1):
                     itr += 1
@@ -181,17 +171,17 @@ class Backtest():
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
                         money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
 
-                        logging.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
+                        self._logger.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
                     elif money >= close_in_ten_min and y_pred_0 > proba_limit:
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
                         money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
 
-                        logging.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
-                logging.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
+                        self._logger.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
+                self._logger.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
 
-            logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
-            logging.info(f"Model for short score: {model0.score(X_test[self.num + self.cat], y_test[target_0])}")
-            logging.info(f"Model for long score: {model1.score(X_test[self.num + self.cat], y_test[target_1])}")
+            self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+            self._logger.info(f"Model for short score: {model0.score(X_test[self.num + self.cat], y_test[target_0])}")
+            self._logger.info(f"Model for long score: {model1.score(X_test[self.num + self.cat], y_test[target_1])}")
 
 
                 # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
@@ -455,7 +445,7 @@ class Backtest():
                 
             history.append(money)
         
-        logging.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+        self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
     
 
     def custom_datasets(self, df_path, start_dt, end_dt, train_size, val_size, test_size = None, use_PCA=False, return_split = False, ind = 0):
