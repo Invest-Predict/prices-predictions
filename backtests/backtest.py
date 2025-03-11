@@ -23,7 +23,7 @@ def resample_last_batch(df, batch_size):
     return df_resampled
 
 class Backtest():
-    def __init__(self, strategies: list[str], args: dict, dfs: list[str], comissions : list[int], timedelta: str = '10min', target: str = 'direction_binary'):
+    def __init__(self, strategies: list[str], args: dict, dfs: list[str], features: list, comissions : list[int], timedelta: str = '10min', target: str = 'direction_binary'):
         self._strategies = strategies  # ['long', 'short']
         self._args = args  # usual argumets for CatboostFinModel
         self._dfs = dfs  # list of paths to datasests. For example ['../../datasets/']
@@ -32,7 +32,7 @@ class Backtest():
         self._target = target
         self.X_train, self.X_val, self.X_test = None,None, None
         self.y_train, self.y_val, self.y_test = None, None, None
-        self.cat, self.num = [], []
+        self.cat, self.num = features[0], features[1]
         self.features = None
         self._logger = setup_logger("baktests_logger", "../logs/backtests.log", level=logging.INFO)
 
@@ -132,11 +132,11 @@ class Backtest():
             corner_dt = start_dt_test
             while corner_dt <= end_dt_test:
                 rounds += 1
-                corner_dt += test_size
 
                 target_0, target_1 = args_for_strategies['short'][1], args_for_strategies['long'][1]
                 model_args0, model_args1 = args_for_strategies['short'][0], args_for_strategies['long'][0]
                 X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(df, train_size, val_size, test_size, corner_dt, [target_0, target_1])
+                corner_dt += test_size
                 self._logger.info(f"Backtesting started for stock - {stock} | round - {rounds}")
                 self._logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
 
