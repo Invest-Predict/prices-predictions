@@ -79,6 +79,9 @@ instance/
 # Scrapy stuff:
 .scrapy
 
+# Telethone
+*.session
+
 # Sphinx documentation
 docs/_build/
 
