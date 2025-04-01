@@ -12,7 +12,7 @@ api_hash = dotenv_values('../../.env')['api_hash']
 username = dotenv_values('../../.env')['username']
 chat = 'markettwits'
 
-limit = 5000
+limit = 100000
 
 offset_date = datetime(2025, 3, 13)
 
