@@ -24,8 +24,6 @@ logging.basicConfig(
     ]
 )
 
-# TODO визуализация? предсказаний по матрице 
-# TODO бутстрап 
 
 
 class CatboostFinModel():

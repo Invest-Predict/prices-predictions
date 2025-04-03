@@ -4,13 +4,9 @@ from catboost import CatBoostClassifier
 import datetime as dt
 import pandas as pd
 import numpy as np
-from multiprocessing import Pool
-from joblib import Parallel, delayed
-from sklearn import clone
-from os import cpu_count
-from sklearn.preprocessing import StandardScaler
 from backtests.logger_config import setup_logger
 import logging
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 
 
 def resample_last_batch(df, batch_size):
@@ -113,64 +109,150 @@ class Backtest():
             self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
             self._logger.info(model.score(X_test[self.num + self.cat], y_test))
 
-                # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
             results.append(history)
         return results, money
         
     
     
-    def test_trading_long_short(self, budget, train_size, val_size, test_size, start_dt_test, end_dt_test, args_for_strategies: dict[str: tuple],
-                                proba_limit = 0.5, use_already_fitted_model = False, use_PCA = False):
+    # def test_trading_long_short(self, budget, train_size, val_size, test_size, start_dt_test, end_dt_test, args_for_strategies: dict[str: tuple],
+    #                             proba_limit = 0.5, use_already_fitted_model = False):
         
-        # args_for_strategies - это словать из двух items, вида {'short': (model_args0, target_name0), 'long': (model_args1, target_name1)}
+    #     # args_for_strategies - это словать из двух items, вида {'short': (model_args0, target_name0), 'long': (model_args1, target_name1)}
+        
+    #     results = []
+
+    #     for stock, df in self._dfs.items():
+    #         rounds = 0
+    #         history = pd.DataFrame(columns=["datetime", "budget"])
+    #         history.loc[0] = [start_dt_test, budget]
+    #         money = budget
+    #         itr = 0  # for the history
+    #         corner_dt = start_dt_test
+    #         while corner_dt <= end_dt_test:
+    #             rounds += 1
+
+    #             target_0, target_1 = args_for_strategies['short'][1], args_for_strategies['long'][1]
+    #             model_args0, model_args1 = args_for_strategies['short'][0], args_for_strategies['long'][0]
+    #             X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(df, train_size, val_size, test_size, corner_dt, [target_0, target_1])
+    #             corner_dt += test_size
+    #             self._logger.info(f"Backtesting started for stock - {stock} | round - {rounds}")
+    #             self._logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
+
+    #             if round == 1 or use_already_fitted_model == False:
+    #                 X_train, X_val = X_train[self.num + self.cat], X_val[self.num + self.cat]
+    #                 model0 = CatboostFinModel(model_args0)
+    #                 model0.set_datasets(X_train, X_val, y_train[target_0], y_val[target_0])
+    #                 model0.set_features(self.num, self.cat)
+
+    #                 model0.fit()
+    #                 self._logger.info(f"Important features for model 0 (short): {model0.get_top_imp_features(20)}")
+    #                 self._logger.info(model0.score(X_test[self.num + self.cat], y_test[target_0]))
+
+    #                 model1 = CatboostFinModel(model_args1)
+    #                 model1.set_datasets(X_train, X_val, y_train[target_1], y_val[target_1])
+    #                 model1.set_features(self.num, self.cat)
+
+    #                 model1.fit()
+    #                 self._logger.info(f"Important features for model 1 (long): {model1.get_top_imp_features(20)}")
+
+
+    #             for i in range(X_test.shape[0] - 1):
+    #                 itr += 1
+    #                 # test = pd.DataFrame(scaler.transform(self.X_test[self.num + self.cat]))
+    #                 y_preds0 = model0.predict_proba(X_test[self.num + self.cat].iloc[i])
+    #                 y_preds1 = model1.predict_proba(X_test[self.num + self.cat].iloc[i])
+    #                 y_pred_1, y_pred_0 = y_preds1[1], y_preds0[0]
+    #                 close_in_ten_min = X_test['close'].iloc[i + 1]
+    #                 open_now = X_test['close'].iloc[i]
+
+    #                 history.loc[itr] = [X_test['utc'].iloc[i + 1], money]
+
+    #                 if money >= open_now and y_pred_1 > proba_limit:
+    #                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
+    #                     money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
+
+    #                     self._logger.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
+    #                 elif money >= close_in_ten_min and y_pred_0 > proba_limit:
+    #                     commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
+    #                     money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
+
+    #                     self._logger.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
+    #             self._logger.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
+
+    #         self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
+    #         self._logger.info(f"Model for short score: {model0.score(X_test[self.num + self.cat], y_test[target_0])}")
+    #         self._logger.info(f"Model for long score: {model1.score(X_test[self.num + self.cat], y_test[target_1])}")
+
+
+    #             # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
+    #         results.append(history)
+    #     return results, money
+        
+
+    def test_trading_long_short(self, budget, train_size, val_size, test_size, start_dt_test, end_dt_test, args_for_strategies: dict[str: tuple],
+                                proba_limit=0.5, use_already_fitted_model=False, use_PCA=False):
         
         results = []
-        results_score = []
+        metrics_results = []  # Список DataFrame для каждой компании
 
         for stock, df in self._dfs.items():
             rounds = 0
             history = pd.DataFrame(columns=["datetime", "budget", "strategy"])
-            history_score = pd.DataFrame(columns=["round", "precision_0", "recall_0", "F1_0", 'support_0', "precision_1", "recall_1", "F1_1", 'support_1'])
             history.loc[0] = [start_dt_test, budget, "start"]
-            history_score.loc[0] = [0] + [0] * 8
             money = budget
             itr = 0  # for the history
             corner_dt = start_dt_test
+
+            self._logger.info(f"Starting backtesting for stock: {stock}")
+
+            # DataFrame для метрик по этой компании
+            metrics_history = pd.DataFrame(columns=[
+                "round", "train_start", "train_end", "val_start", "val_end", "test_start", "test_end",
+                "short_loss_val", "long_loss_val", 
+                "short_precision_0", "short_recall_0", "short_f1_0", "short_auc_0",
+                "long_precision_1", "long_recall_1", "long_f1_1", "long_auc_1",
+                "short_TP", "short_FP", "short_FN", "short_TN",
+                "long_TP", "long_FP", "long_FN", "long_TN"
+            ])
+
             while corner_dt <= end_dt_test:
                 rounds += 1
 
                 target_0, target_1 = args_for_strategies['short'][1], args_for_strategies['long'][1]
                 model_args0, model_args1 = args_for_strategies['short'][0], args_for_strategies['long'][0]
-                X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(df, train_size, val_size, test_size, corner_dt, [target_0, target_1])
+                X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(
+                    df, train_size, val_size, test_size, corner_dt, [target_0, target_1]
+                )
 
+                train_start, train_end = X_train['utc'].iloc[0], X_train['utc'].iloc[-1]
+                val_start, val_end = X_val['utc'].iloc[0], X_val['utc'].iloc[-1]
+                test_start, test_end = X_test['utc'].iloc[0], X_test['utc'].iloc[-1]
                 corner_dt += test_size
-                self._logger.info(f"Backtesting started for stock - {stock} | round - {rounds}")
-                self._logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
 
-                if round == 1 or use_already_fitted_model == False:
+                self._logger.info(f"Round {rounds} - Train: {train_start} to {train_end}, Validation: {val_start} to {val_end}, Test: {test_start} to {test_end}")
+
+                if rounds == 1 or not use_already_fitted_model:
                     X_train, X_val = X_train[self.num + self.cat], X_val[self.num + self.cat]
                     model0 = CatboostFinModel(model_args0)
                     model0.set_datasets(X_train, X_val, y_train[target_0], y_val[target_0])
                     model0.set_features(self.num, self.cat)
-
                     model0.fit()
+                    self._logger.info(f"Model 0 (short) trained.")
 
                     model1 = CatboostFinModel(model_args1)
                     model1.set_datasets(X_train, X_val, y_train[target_1], y_val[target_1])
                     model1.set_features(self.num, self.cat)
-
                     model1.fit()
-                    self._logger.info(f"Important features for model 0 (short): {model0.get_top_imp_features(20)}")
-                    self._logger.info(f"Important features for model 1 (long): {model1.get_top_imp_features(20)}")
+                    self._logger.info(f"Model 1 (long) trained.")
 
                 for i in range(X_test.shape[0] - 1):
                     itr += 1
-                    # test = pd.DataFrame(scaler.transform(self.X_test[self.num + self.cat]))
                     y_preds0 = model0.predict_proba(X_test[self.num + self.cat].iloc[i])
                     y_preds1 = model1.predict_proba(X_test[self.num + self.cat].iloc[i])
                     y_pred_1, y_pred_0 = y_preds1[1], y_preds0[0]
                     close_in_ten_min = X_test['close'].iloc[i + 1]
                     open_now = X_test['close'].iloc[i]
+
 
                     if money >= open_now and y_pred_1 > proba_limit:
                         history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'long']
@@ -187,52 +269,45 @@ class Backtest():
                     else:
                         history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'wait']
                 self._logger.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
-                score_dict0 = model0.score(X_test[self.num + self.cat], y_test[target_0], output_dict=True)
-                score_dict1 = model1.score(X_test[self.num + self.cat], y_test[target_1], output_dict=True)
 
-                history_score.loc[itr] = [rounds] + list(score_dict0['0'].values()) + list(score_dict1['1'].values())
+                # Оценка моделей
+                short_loss_val = model0.model.get_best_score()['validation']['Logloss'] 
+                long_loss_val = model1.model.get_best_score()['validation']['Logloss'] 
+                
+                y_preds0_test = model0.predict(X_test[self.num + self.cat])
+                y_preds1_test = model1.predict(X_test[self.num + self.cat])
+                
+                short_precision_0 = precision_score(y_test[target_0], y_preds0_test, pos_label=0)
+                short_recall_0 = recall_score(y_test[target_0], y_preds0_test, pos_label=0)
+                short_f1_0 = f1_score(y_test[target_0], y_preds0_test, pos_label=0)
+                short_auc_0 = roc_auc_score(y_test[target_0], model0.predict_proba(X_test[self.num + self.cat])[:, 0])
+                
+                long_precision_1 = precision_score(y_test[target_1], y_preds1_test, pos_label=1)
+                long_recall_1 = recall_score(y_test[target_1], y_preds1_test, pos_label=1)
+                long_f1_1 = f1_score(y_test[target_1], y_preds1_test, pos_label=1)
+                long_auc_1 = roc_auc_score(y_test[target_1], model1.predict_proba(X_test[self.num + self.cat])[:, 1])
+                
+                short_TN, short_FP, short_FN, short_TP = confusion_matrix(y_test[target_0], y_preds0_test).ravel()
+                long_TN, long_FP, long_FN, long_TP = confusion_matrix(y_test[target_1], y_preds1_test).ravel()
+                
+                self._logger.info(f"Metrics for round {rounds} - Stock: {stock}")
+                self._logger.info(f"Short model val loss: {short_loss_val}, Long model val loss: {long_loss_val}")
+                
+                metrics_history.loc[len(metrics_history)] = [
+                    rounds, train_start, train_end, val_start, val_end, test_start, test_end,
+                    short_loss_val,long_loss_val,
+                    short_precision_0, short_recall_0, short_f1_0, short_auc_0,
+                    long_precision_1, long_recall_1, long_f1_1, long_auc_1,
+                    short_TP, short_FP, short_FN, short_TN,
+                    long_TP, long_FP, long_FN, long_TN
+                ]
 
-            self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
-            self._logger.info(f"Model for short score: {model0.score(X_test[self.num + self.cat], y_test[target_0])}")
-            self._logger.info(f"Model for long score: {model1.score(X_test[self.num + self.cat], y_test[target_1])}")
-
-
-                # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
+            self._logger.info(f"Backtesting completed for stock: {stock}")
             results.append(history)
-            results_score.append(history_score)
-        return results, money, results_score
-        
-    
-    def process_company(self, custom_datasets_args, use_PCA, df_path):
-        custom_datasets_args['df_path'] = df_path
-        custom_datasets_args['return_split'] = True
+            metrics_results.append(metrics_history)
 
-        custom_datasets_args['ind'] = 0
-        X_train, X_val, X_test, y_train, y_val, y_test, num = self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
-        stock = df_path.split('/')[-1][:-11]  
-        self._logger.info(f"Training long model starterd for stock - {stock}")
-        self._logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
-        X_train, X_val = X_train[num], X_val[num]
-        model_long = CatboostFinModel(self._args[0])
-        model_long.set_datasets(X_train, X_val, y_train, y_val)
-        model_long.set_features(num, [])
-        model_long.fit()
-        self._logger.info(f"Training long model ended with loss {model_long.model.best_score_}")
+        return results, money, metrics_results
 
-        custom_datasets_args['ind'] = 1
-        X_train, X_val, X_test, y_train, y_val, y_test, num = self.custom_datasets(**custom_datasets_args, use_PCA=use_PCA)
-        stock = df_path.split('/')[-1][:-11]  
-        self._logger.info(f"Training short model starterd for stock - {stock}")
-        self._logger.info(f"Train dates: {X_train['utc'].iloc[0]} - {X_train['utc'].iloc[-1]} | Valid dates: {X_val['utc'].iloc[0]} - {X_val['utc'].iloc[-1]} | Test dates: {X_test['utc'].iloc[0]} - {X_test['utc'].iloc[-1]}")
-        X_train, X_val = X_train[num], X_val[num]
-
-        model_short = CatboostFinModel(self._args[1])
-        model_short.set_datasets(X_train, X_val, y_train, y_val)
-        model_short.set_features(num, [])
-        model_short.fit()
-        self._logger.info(f"Training short model ended with loss {model_long.model.best_score_}")
-        # models_short.append(model_short)
-        return (X_test, y_test, stock, model_long, model_short, num)
 
     
     def test_multistock(self, budget, custom_datasets_args, proba_limit = 0.5, use_PCA = False, add_model : dict | None = None):

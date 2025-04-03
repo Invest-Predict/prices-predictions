@@ -39,15 +39,7 @@ def filter_trading_hours():
         return data
     return FunctionTransformer(_filter_trading_hours, validate=False)
 
-def split_data(train_size, val_size, test_size):
-    def _split_data(data):
-        X, y = data.df.drop(columns=data.target), data.df[data.target]
-        X_train, X_val, X_test = X[:train_size], X[train_size:train_size + val_size], X[train_size + val_size: train_size + val_size + test_size]
-        y_train, y_val, y_test = y[:train_size], y[train_size:train_size + val_size], y[train_size + val_size: train_size + val_size + test_size]
-        return X_train, X_val, X_test, y_train, y_val, y_test
-    return FunctionTransformer(_split_data, validate=False)
-
-def create_pipeline(df_path, start_dt, end_dt, train_size, val_size, test_size, features = None, fill_skips = True):
+def create_pipeline(df_path, start_dt, end_dt, features=None, fill_skips=True):
     pipeline = Pipeline([
         ('initialize_findata', initialize_findata(df_path, fill_skips)),
         ('restrict_time_down', restrict_time_down(weeks=4)),
@@ -55,17 +47,13 @@ def create_pipeline(df_path, start_dt, end_dt, train_size, val_size, test_size, 
         ('insert_features', insert_features(features)),
         ('restrict_time_down_to_start', restrict_time_down_to_start(start_dt)),
         ('filter_trading_hours', filter_trading_hours()),
-        ('split_data', split_data(train_size, val_size, test_size))
     ])
     return pipeline
 
-
+# Example usage
 # df_path = 'path/to/your/data.csv'
 # start_dt = dt.datetime(2024, 1, 1)
 # end_dt = dt.datetime(2024, 12, 31)
-# train_size = 1000
-# val_size = 200
-# test_size = 200
 # features = {
 #     "shifts_norms": [1, 2, 3],
 #     "ma": [5, 10],
@@ -79,5 +67,5 @@ def create_pipeline(df_path, start_dt, end_dt, train_size, val_size, test_size, 
 # }
 # fill_skips = True
 
-# pipeline = create_pipeline(df_path, start_dt, end_dt, train_size, val_size, test_size, features, fill_skips)
-# X_train, X_val, X_test, y_train, y_val, y_test = pipeline.fit_transform(None)
+# pipeline = create_pipeline(df_path, start_dt, end_dt, features, fill_skips)
+# findata = pipeline.fit_transform(None)

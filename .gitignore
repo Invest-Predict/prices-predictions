@@ -79,6 +79,9 @@ instance/
 # Scrapy stuff:
 .scrapy
 
+# Telethone
+*.session
+
 # Sphinx documentation
 docs/_build/
 
@@ -182,3 +185,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+budget_datasets/
+examples/my_bottle_2/catboost_info/learn_error.tsv
+examples/my_bottle_2/catboost_info/test/events.out.tfevents
+examples/my_bottle_2/catboost_info/test_error.tsv
+examples/my_bottle_2/catboost_info/time_left.tsv
