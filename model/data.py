@@ -44,8 +44,8 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         if fill_skips:
             self._fill_skips()
 
-        self.make_binary_class_target(target_name="direction_binary_0", ind = 0)
-        self.make_binary_class_target(target_name="direction_binary_1", ind = 1)
+        self.make_both_binary_class_target(target_name="direction_binary")
+
 
     def _fill_skips(self):
         self.df.set_index('utc', inplace=True)
@@ -75,18 +75,18 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         df_reindexed.rename(columns={'index': 'utc'}, inplace=True)
         self.df = df_reindexed
 
-    def make_binary_class_target(self, target_name, ind):
-        """ 
-        Создаёт бинарный таргет на основе изменения цены закрытия.
+    # def make_binary_class_target(self, target_name, ind):
+    #     """ 
+    #     Создаёт бинарный таргет на основе изменения цены закрытия.
 
-        Параметры:
-            target_name (str): Название колонки для таргета.
-        """
-        if ind == 0:
-            self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
-        elif ind == 1:
-            self.df[target_name] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
-        self.target = [target_name]
+    #     Параметры:
+    #         target_name (str): Название колонки для таргета.
+    #     """
+    #     if ind == 0:
+    #         self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
+    #     elif ind == 1:
+    #         self.df[target_name] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
+    #     self.target = [target_name]
     
 
     def make_both_binary_class_target(self, target_name='direction_binary'):
