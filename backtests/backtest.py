@@ -125,11 +125,14 @@ class Backtest():
         # args_for_strategies - это словать из двух items, вида {'short': (model_args0, target_name0), 'long': (model_args1, target_name1)}
         
         results = []
+        results_score = []
 
         for stock, df in self._dfs.items():
             rounds = 0
             history = pd.DataFrame(columns=["datetime", "budget", "strategy"])
+            history_score = pd.DataFrame(columns=["round", "precision_0", "recall_0", "F1_0", 'support_0', "precision_1", "recall_1", "F1_1", 'support_1'])
             history.loc[0] = [start_dt_test, budget, "start"]
+            history_score.loc[0] = [0] + [0] * 8
             money = budget
             itr = 0  # for the history
             corner_dt = start_dt_test
@@ -169,7 +172,6 @@ class Backtest():
                     close_in_ten_min = X_test['close'].iloc[i + 1]
                     open_now = X_test['close'].iloc[i]
 
-
                     if money >= open_now and y_pred_1 > proba_limit:
                         history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'long']
                         commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
@@ -185,6 +187,10 @@ class Backtest():
                     else:
                         history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'wait']
                 self._logger.info(f"My budget on round - {rounds} before {budget} and after trading {money}\n")
+                score_dict0 = model0.score(X_test[self.num + self.cat], y_test[target_0], output_dict=True)
+                score_dict1 = model1.score(X_test[self.num + self.cat], y_test[target_1], output_dict=True)
+
+                history_score.loc[itr] = [rounds] + list(score_dict0['0'].values()) + list(score_dict1['1'].values())
 
             self._logger.info(f"\n\n\nMy budget before {budget} and after trading {money}\nMommy, are you prod of me?")
             self._logger.info(f"Model for short score: {model0.score(X_test[self.num + self.cat], y_test[target_0])}")
@@ -193,7 +199,8 @@ class Backtest():
 
                 # results.append((money - budget,  model.score(self.X_test, self.y_test))) # ны выходе прибыль (точнее список прибыли и accuracy)
             results.append(history)
-        return results, money
+            results_score.append(history_score)
+        return results, money, results_score
         
     
     def process_company(self, custom_datasets_args, use_PCA, df_path):
