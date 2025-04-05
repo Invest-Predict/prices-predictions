@@ -1,5 +1,5 @@
 import sklearn
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PowerTransformer
 from enum import Enum
 import datetime as dt
 from multiprocessing import Pool
@@ -40,6 +40,23 @@ def train_data_hp_filter(data, l=10, num_pr=None):
 
     return data_copy
 
+class Scaler(Enum):
+    """
+    Перечисление для выбора метода скейлинга данных.
+    """
+    Standard = StandardScaler
+    Power = PowerTransformer
+
+def scale_num_data(fit_data, tranform_data, numeric, scaler : Scaler):
+    scale_model = scaler.value()
+    fitted_scaler = scale_model.fit(fit_data[numeric])
+    res = []
+    for df in tranform_data:
+        transformed_data = df.copy()
+        transformed_data[numeric] = fitted_scaler.transform(transformed_data[numeric])
+        res.append(transformed_data)
+    return res
+
 def merged_split(data, 
                  start_data, 
                  num_train_candles, 
@@ -77,42 +94,15 @@ def merged_split(data,
         X_test = restr_data[numeric + cat].iloc[test_indexes]
         y_test = restr_data[target].iloc[test_indexes]
         return X_train, X_val, X_test, y_train, y_val, y_test
-    
-def scale_data(X_train, X_val, X_test, num_features, scaler = StandardScaler()):
-    """
-    Масштабирует числовые признаки с помощью переданного скейлера.
-    
-    :param X_train: Данные для обучения (DataFrame или массив)
-    :param X_val: Данные для валидации (DataFrame или массив)
-    :param X_test: Данные для тестирования (DataFrame или массив)
-    :param num_features: Список имен числовых признаков
-    :param scaler: Объект скейлера (например, StandardScaler, MinMaxScaler и т. д.)
-    :return: Кортеж (X_train_scaled, X_val_scaled, X_test_scaled, fitted_scaler)
-    """
-    scaler = scaler.fit(X_train[num_features])
 
-    X_train_scaled = X_train.copy()
-    X_val_scaled = X_val.copy()
-    X_test_scaled = X_test.copy()
-
-    X_train_scaled[num_features] = scaler.transform(X_train[num_features])
-    X_val_scaled[num_features] = scaler.transform(X_val[num_features])
-    X_test_scaled[num_features] = scaler.transform(X_test[num_features])
-
-    return X_train_scaled, X_val_scaled, X_test_scaled
-
-
-def mul_PCA(X_train, X_val, X_test, n_comp = "mle"):
-    # Нужно подавать центрированные данные по хорошему)
-    pca = PCA(n_components=n_comp, random_state=42)
+def mul_PCA(X_train, X_val, X_test, n_comp = "mle", add_utc = False):
+    pca = PCA(n_components = n_comp, random_state=42)
     X_train_pca, X_val_pca, X_test_pca = pca.fit_transform(X_train), pca.transform(X_val), pca.transform(X_test)
-    numeric_features = [f'PC{i+1}' for i in range(pca.n_components_)]
-    
-    X_train_pca_df = pd.DataFrame(X_train_pca, index=X_train.index, columns=numeric_features)
-    X_val_pca_df = pd.DataFrame(X_val_pca, index=X_val.index, columns=numeric_features)
-    X_test_pca_df = pd.DataFrame(X_test_pca, index=X_test.index, columns=numeric_features)
-    
-    return X_train_pca_df, X_val_pca_df, X_test_pca_df, numeric_features
+    if add_utc:
+        X_train_pca['utc'] = X_train['utc']
+        X_val_pca['utc'] = X_val['utc']
+        X_test_pca['utc'] = X_test['utc'] 
+    return X_train_pca, X_val_pca, X_test_pca
 
     
 def train_valid_split_candles(data, train_size, val_size, numeric, cat, target, silenced=True):
