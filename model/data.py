@@ -1,3 +1,4 @@
+from collections import defaultdict
 from types import NoneType
 import pandas as pd
 import datetime as dt
@@ -5,15 +6,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from arch.unitroot import PhillipsPerron
 from statsmodels.tsa.stattools import adfuller, zivot_andrews
-from datetime import date
 
 from .features import StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin, SmoothingFeaturesMixin
 from .features import SmallFeaturesMixin
+from .features import NewsFeaturesMixin
 
 # Здесь все признаки и все по датафрейму
 
 class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, 
-              UncommonFeaturesMixin, SmoothingFeaturesMixin, SmallFeaturesMixin):
+              UncommonFeaturesMixin, SmoothingFeaturesMixin, SmallFeaturesMixin, 
+              NewsFeaturesMixin):
     """
     Класс для обработки финансовых данных. 
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
@@ -356,9 +358,5 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         correlations = self.df[columns + [column_with]].corr()[column_with].drop(index=column_with).sort_values()
         print("Корреляции столбцов с колонкой '{}':".format(column_with))
         print(correlations)
-
-    
-
-
 
 

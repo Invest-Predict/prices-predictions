@@ -2,7 +2,7 @@ import pandas as pd
 
 class TimeFeaturesMixin:
     def __init__(self):
-        self.df: pd.DataFrame() = None
+        self.df: pd.DataFrame = None
         self.cat_features: list = []
         self.numeric_features: list = []
 
