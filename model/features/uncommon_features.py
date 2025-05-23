@@ -23,7 +23,7 @@ class UncommonFeaturesMixin:
             self.insert_rolling_means([16])
         self.df['SD'] =np.sqrt(np.square((self.df["ma_16"] - self.df["close"])).rolling(16, closed='left').sum())
         self.df['upper_bollinger'] = self.df["ma_16"] + self.df['SD'] * 2
-        self.df['low_bollinger'] = self.df["ma_18"] - self.df['SD'] * 2
+        self.df['low_bollinger'] = self.df["ma_16"] - self.df['SD'] * 2
 
         self.df['close_normed_upper_bollinger'] = self.df['close']/self.df['upper_bollinger']
         self.df['close_normed_low_bollinger'] = self.df['close']/self.df['low_bollinger']
