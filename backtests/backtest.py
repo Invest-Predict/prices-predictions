@@ -220,6 +220,8 @@ class Backtest():
 
                 target_0, target_1 = args_for_strategies['short'][1], args_for_strategies['long'][1]
                 model_args0, model_args1 = args_for_strategies['short'][0], args_for_strategies['long'][0]
+                model_args0['cat_features'] = self.cat
+                model_args1['cat_features'] = self.cat
                 X_train, X_val, X_test, y_train, y_val, y_test = self.another_train_val_test_split(
                     df, train_size, val_size, test_size, corner_dt, [target_0, target_1]
                 )
