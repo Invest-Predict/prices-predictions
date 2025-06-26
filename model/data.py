@@ -75,21 +75,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         # Сбрасываем индекс, чтобы 'utc' стал столбцом
         df_reindexed.reset_index(inplace=True)
         df_reindexed.rename(columns={'index': 'utc'}, inplace=True)
-        self.df = df_reindexed
-
-    # def make_binary_class_target(self, target_name, ind):
-    #     """ 
-    #     Создаёт бинарный таргет на основе изменения цены закрытия.
-
-    #     Параметры:
-    #         target_name (str): Название колонки для таргета.
-    #     """
-    #     if ind == 0:
-    #         self.df[target_name] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
-    #     elif ind == 1:
-    #         self.df[target_name] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
-    #     self.target = [target_name]
-    
+        self.df = df_reindexed    
 
     def make_both_binary_class_target(self, target_name='direction_binary'):
         """ 
@@ -100,15 +86,6 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         """
         self.df[target_name + '_0'] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
         self.df[target_name + '_1'] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
-
-    # def make_long_strat_target(self, target_name, commission):
-    #     self.df["vol_up"] = (self.df['close'].shift(-1) - self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
-    #     self.df[target_name] = self.df[target_name] = np.where(self.df["vol_up"] > commission * 2, 1, 0)
-
-
-    # def make_short_strat_target(self, target_name, commission):
-    #     self.df["vol_down"] = (- self.df['close'].shift(-1) + self.df['close']) / ((self.df['close'].shift(-1) + self.df['close']) / 2)
-    #     self.df[target_name] = (self.df["vol_down"] > commission*2).astype('int')
 
 
     def get_numeric_features(self):
@@ -318,9 +295,9 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
 
                         # проверка p-value для каждого теста
                         non_stationary_tests = []
-                        if pp_result.pvalue > 0.05:
+                        if pp_result.pvalue > 0.01:
                             non_stationary_tests.append(f"Phillips-Perron (p-value: {pp_result.pvalue:.5f})")
-                        if adf_result[1] > 0.05:
+                        if adf_result[1] > 0.01:
                             non_stationary_tests.append(f"ADF (p-value: {adf_result[1]:.5f})")
                         # if za_result and za_result[1] > 0.05:
                         #     non_stationary_tests.append(f"Zivot-Andrews (p-value: {za_result[1]:.5f})")

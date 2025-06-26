@@ -21,7 +21,7 @@ class UncommonFeaturesMixin:
         """
         if 'ma_16' not in self.df.columns:
             self.insert_rolling_means([16])
-        self.df['SD'] =np.sqrt(np.square((self.df["ma_16"] - self.df["close"])).rolling(16, closed='left').sum())
+        self.df['SD'] = self.df["close"].rolling(16, closed='left').std()
         self.df['upper_bollinger'] = self.df["ma_16"] + self.df['SD'] * 2
         self.df['low_bollinger'] = self.df["ma_16"] - self.df['SD'] * 2
 
