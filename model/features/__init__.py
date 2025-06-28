@@ -4,3 +4,4 @@ from .trend_features import TrendFeaturesMixin
 from .uncommon_features import UncommonFeaturesMixin
 from .smoothing_features import SmoothingFeaturesMixin
 from .small_features import SmallFeaturesMixin
+from .news_features import NewsFeaturesMixin

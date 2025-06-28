@@ -4,7 +4,7 @@ import datetime as dt
 
 class SmallFeaturesMixin:
     def __init__(self):
-        self.df: pd.DataFrame() = None
+        self.df: pd.DataFrame = None
         self.cat_features: list = []
         self.numeric_features: list = []
 
