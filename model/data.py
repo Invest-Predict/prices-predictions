@@ -7,7 +7,7 @@ import numpy as np
 from arch.unitroot import PhillipsPerron
 from statsmodels.tsa.stattools import adfuller, zivot_andrews
 
-from .features import StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin, SmoothingFeaturesMixin
+from .features import StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, UncommonFeaturesMixin, SmoothingFeaturesMixin, VolatilityFeaturesMixin
 from .features import SmallFeaturesMixin
 from .features import NewsFeaturesMixin
 
@@ -15,7 +15,7 @@ from .features import NewsFeaturesMixin
 
 class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin, 
               UncommonFeaturesMixin, SmoothingFeaturesMixin, SmallFeaturesMixin, 
-              NewsFeaturesMixin):
+              NewsFeaturesMixin, VolatilityFeaturesMixin):
     """
     Класс для обработки финансовых данных. 
     Позволяет загружать данные, фильтровать их по времени, добавлять признаки, 
