@@ -54,7 +54,8 @@ class Backtest():
         return X_train, X_val, X_test, y_train, y_val, y_test
 
     
-    def test_trading(self, budget, train_size, val_size, test_size, start_dt_test, end_dt_test, proba_limit = 0.5, use_already_fitted_model = False):
+    def test_trading(self, budget, train_size, val_size, test_size, start_dt_test, end_dt_test, proba_limit = 0.5, use_already_fitted_model = False,
+                     use_proba_proportion=False):
 
         results = []
 
@@ -92,14 +93,16 @@ class Backtest():
 
                     if money >= open_now and y_pred_1 > proba_limit and 'long' in self._strategies:
                         history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'long']
-                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
-                        money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
+                        proportion = y_pred_1 if use_proba_proportion else 1.0
+                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now) * proportion
+                        money += (close_in_ten_min - open_now) * (money  // open_now) * proportion - commission_now
 
                         self._logger.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {commission_now} -> budget: {money}")
                     elif money >= close_in_ten_min and y_pred_0 > proba_limit and 'short' in self._strategies:
+                        proportion = y_pred_0 if use_proba_proportion else 1.0
                         history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'short']
-                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
-                        money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
+                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min) * proportion
+                        money += (open_now - close_in_ten_min) * (money  // open_now) * proportion - commission_now
 
                         self._logger.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {commission_now} -> budget: {money}")
                     else:
@@ -190,7 +193,7 @@ class Backtest():
         
 
     def test_trading_long_short(self, budget, train_size, val_size, test_size, start_dt_test, end_dt_test, args_for_strategies: dict[str: tuple],
-                                proba_limit=0.5, use_already_fitted_model=False, use_PCA=False):
+                                proba_limit=0.5, use_already_fitted_model=False, use_PCA=False, use_proba_proportion=False):
         
         results = []
         metrics_results = []  # Список DataFrame для каждой компании
@@ -258,14 +261,15 @@ class Backtest():
 
                     if money >= open_now and y_pred_1 > proba_limit:
                         history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'long']
-                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now)
-                        money += (close_in_ten_min - open_now) * (money  // open_now) - commission_now
-
+                        proportion = y_pred_1 if use_proba_proportion else 1.0
+                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money  // open_now) * proportion
+                        money += (close_in_ten_min - open_now) * (money  // open_now) * proportion - commission_now
                         self._logger.info(f"LONG! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_1} - I bought for {open_now} and sold for {close_in_ten_min} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
                     elif money >= close_in_ten_min and y_pred_0 > proba_limit:
                         history.loc[itr] = [X_test['utc'].iloc[i + 1], money, 'short']
-                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min)
-                        money += (open_now - close_in_ten_min) * (money  // open_now) - commission_now
+                        proportion = y_pred_0 if use_proba_proportion else 1.0
+                        commission_now = ((open_now + close_in_ten_min) * self._comission[0]) * (money // close_in_ten_min) * proportion
+                        money += (open_now - close_in_ten_min) * (money  // open_now) * proportion - commission_now
 
                         self._logger.info(f"SHORT! - {stock}, Date&Time: {X_test['utc'].iloc[i]}, proba: {y_pred_0} - I bought for {close_in_ten_min} and sold for {open_now} + commission {(open_now + close_in_ten_min) * self._comission[0]} -> budget: {money}")
                     else:
