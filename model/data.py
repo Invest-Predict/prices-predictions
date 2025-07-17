@@ -86,6 +86,7 @@ class FinData(StandartFeaturesMixin, TimeFeaturesMixin, TrendFeaturesMixin,
         """
         self.df[target_name + '_0'] = (self.df['close'].shift(-1) > self.df['close']).astype('int')
         self.df[target_name + '_1'] = (self.df['close'].shift(-1) >= self.df['close']).astype('int')
+        self.df[target_name + '_strong_0'] = (self.df['close'].shift(-1)/self.df['close'] > 1.0004).astype('int')
 
 
     def get_numeric_features(self):

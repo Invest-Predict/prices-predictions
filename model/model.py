@@ -101,17 +101,41 @@ class ClassifierFinModel:
 class CatboostFinModel(ClassifierFinModel):
     def __init__(self, args):
         super().__init__(CatBoostClassifier, args)
+        
 
-    def fit(self, mod=True):
+    def fit(self, sample_weights_train = None, sample_weights_val = None, mod=True):
         if mod:
             self.X_val = self.X_val[self.numeric + self.cat]
-            self.X_train = self.X_train[self.numeric + self.cat]
-        self.model.fit(
-            self.X_train,
-            self.y_train,
-            eval_set=Pool(self.X_val, self.y_val, cat_features=self.cat),
+            self.X_train = self.X_train[self.numeric + self.cat] 
+
+        train_pool = Pool(
+            data=self.X_train,
+            label=self.y_train,
+            weight=sample_weights_train,
             cat_features=self.cat
         )
+        
+        val_pool = Pool(  # ключевое изменение!
+            data=self.X_val,
+            label=self.y_val,
+            weight=sample_weights_val,  # веса для валидации
+            cat_features=self.cat
+        )
+
+        self.model.fit(
+            train_pool,
+            eval_set=val_pool,  # важно использовать eval_set с весами
+            use_best_model=True,
+            verbose=0
+        )
+
+        # self.model.fit(
+        #     self.X_train,
+        #     self.y_train,
+        #     eval_set=Pool(self.X_val, self.y_val, cat_features=self.cat),
+        #     cat_features=self.cat, 
+        #     sample_weights=sample_weights
+        # )
         return self
 
     def print_feature_importances(self):
@@ -147,6 +171,8 @@ class XGBoostFinModel(ClassifierFinModel):
 
 class ANNFinModel(ClassifierFinModel):
         pass
+
+
     
 
 
